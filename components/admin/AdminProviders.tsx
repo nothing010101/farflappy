@@ -11,7 +11,7 @@ import { wagmiAdapter, projectId } from '@/config/reownConfig'
 const queryClient = new QueryClient()
 
 createAppKit({
-  adapters: [wagmiAdapter],
+  adapters: [wagmiAdapter as never],
   projectId: projectId!,
   networks: [base],
   defaultNetwork: base,
