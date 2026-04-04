@@ -266,7 +266,7 @@ export default function GameEngine({
 
     function checkCollision(bx: number, by: number): boolean {
       // Floor/ceiling
-      if (by <= 0 || by + BIRD_SIZE >= canvas.height - 40) return true
+      if (by <= 0 || by + BIRD_SIZE >= canvas!.height - 40) return true
 
       for (const pipe of s.pipes) {
         if (
@@ -283,24 +283,24 @@ export default function GameEngine({
 
     function drawBackground() {
       // Sky gradient
-      const grad = ctx.createLinearGradient(0, 0, 0, canvas.height)
+      const grad = ctx.createLinearGradient(0, 0, 0, canvas!.height)
       grad.addColorStop(0, '#0f0a1e')
       grad.addColorStop(1, '#1a1035')
       ctx.fillStyle = grad
-      ctx.fillRect(0, 0, canvas.width, canvas.height)
+      ctx.fillRect(0, 0, canvas!.width, canvas!.height)
 
       // Stars
       ctx.fillStyle = 'rgba(167,139,250,0.4)'
       for (let i = 0; i < 30; i++) {
-        const sx = ((i * 137 + s.frame * 0.2) % canvas.width)
-        const sy = (i * 79) % (canvas.height * 0.6)
+        const sx = ((i * 137 + s.frame * 0.2) % canvas!.width)
+        const sy = (i * 79) % (canvas!.height * 0.6)
         const ss = i % 3 === 0 ? 2 : 1
         ctx.fillRect(sx, sy, ss, ss)
       }
 
       // Ground
-      drawPixelRect(ctx, 0, canvas.height - 40, canvas.width, 40, '#1a1035')
-      drawPixelRect(ctx, 0, canvas.height - 40, canvas.width, 4, '#4c1d95')
+      drawPixelRect(ctx, 0, canvas!.height - 40, canvas!.width, 40, '#1a1035')
+      drawPixelRect(ctx, 0, canvas!.height - 40, canvas!.width, 4, '#4c1d95')
     }
 
     function drawHUD() {
@@ -308,7 +308,7 @@ export default function GameEngine({
       ctx.fillStyle = '#f5d020'
       ctx.font = '10px "Press Start 2P"'
       ctx.textAlign = 'center'
-      ctx.fillText(`${s.score}`, canvas.width / 2, 30)
+      ctx.fillText(`${s.score}`, canvas!.width / 2, 30)
 
       // Active effects
       const now = Date.now()
@@ -331,7 +331,7 @@ export default function GameEngine({
         ctx.fillStyle = '#f5d020'
         ctx.font = '8px "Press Start 2P"'
         ctx.textAlign = 'right'
-        ctx.fillText(`x${mult}`, canvas.width - 8, 20)
+        ctx.fillText(`x${mult}`, canvas!.width - 8, 20)
       }
     }
 
@@ -354,18 +354,18 @@ export default function GameEngine({
       const pipeInterval = Math.max(90, 130 - s.pipesPassed * 0.5)
       if (s.pipeTimer >= pipeInterval) {
         s.pipeTimer = 0
-        const topHeight = 60 + Math.random() * (canvas.height - PIPE_GAP - 100)
+        const topHeight = 60 + Math.random() * (canvas!.height - PIPE_GAP - 100)
         const midY = topHeight + PIPE_GAP / 2
         const hasCoinChain = Math.random() < 0.4
 
-        s.pipes.push({ x: canvas.width, topHeight, passed: false, hasCoinChain })
+        s.pipes.push({ x: canvas!.width, topHeight, passed: false, hasCoinChain })
 
         if (hasCoinChain) {
-          spawnCoinChain(canvas.width + PIPE_WIDTH + 20, midY)
+          spawnCoinChain(canvas!.width + PIPE_WIDTH + 20, midY)
         }
 
         // Maybe spawn item
-        spawnItem(canvas.width + PIPE_WIDTH + 60, midY)
+        spawnItem(canvas!.width + PIPE_WIDTH + 60, midY)
       }
 
       // Move pipes
@@ -462,7 +462,7 @@ export default function GameEngine({
 
       // Pipes
       for (const pipe of s.pipes) {
-        drawPipe(ctx, pipe.x, pipe.topHeight, canvas.height)
+        drawPipe(ctx, pipe.x, pipe.topHeight, canvas!.height)
       }
 
       // Coins
