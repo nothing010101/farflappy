@@ -4,13 +4,13 @@ import { ReactNode, useEffect } from 'react'
 import { WagmiProvider, createConfig, http } from 'wagmi'
 import { base } from 'wagmi/chains'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { farcasterFrame as farcasterMiniApp } from '@farcaster/frame-wagmi-connector'
+import { injected } from 'wagmi/connectors'
 import { sdk } from '@farcaster/miniapp-sdk'
 
 const config = createConfig({
   chains: [base],
   transports: { [base.id]: http() },
-  connectors: [farcasterMiniApp()],
+  connectors: [injected()],
 })
 
 const queryClient = new QueryClient()
