@@ -1,0 +1,85 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --farcaster: #7c3aed;
+  --farcaster-light: #a78bfa;
+  --farcaster-dark: #4c1d95;
+  --pixel: #f5d020;
+  --bg-primary: #0f0a1e;
+  --bg-secondary: #1a1035;
+  --bg-card: #1e1540;
+  --text: #e2d9f3;
+  --text-muted: #7c6fa0;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg-primary);
+  color: var(--text);
+  font-family: 'IBM Plex Mono', monospace;
+  overflow-x: hidden;
+}
+
+/* Pixel scanline effect */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,0,0,0.03) 2px,
+    rgba(0,0,0,0.03) 4px
+  );
+  pointer-events: none;
+  z-index: 9999;
+}
+
+.pixel-font { font-family: 'Press Start 2P', monospace; }
+
+.card {
+  background: var(--bg-card);
+  border: 1px solid rgba(124,58,237,0.3);
+  border-radius: 8px;
+}
+
+.btn-primary {
+  background: var(--farcaster);
+  color: white;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+  image-rendering: pixelated;
+}
+
+.btn-primary:hover {
+  background: var(--farcaster-light);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 20px rgba(124,58,237,0.4);
+}
+
+.btn-primary:active { transform: translateY(0); }
+
+/* Pixel border effect */
+.pixel-border {
+  box-shadow: 
+    4px 0 0 var(--farcaster),
+    -4px 0 0 var(--farcaster),
+    0 4px 0 var(--farcaster),
+    0 -4px 0 var(--farcaster);
+}
+
+canvas { image-rendering: pixelated; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: var(--bg-secondary); }
+::-webkit-scrollbar-thumb { background: var(--farcaster); border-radius: 2px; }
