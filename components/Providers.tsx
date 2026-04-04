@@ -4,7 +4,7 @@ import { ReactNode, useEffect } from 'react'
 import { WagmiProvider, createConfig, http } from 'wagmi'
 import { base } from 'wagmi/chains'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { farcasterMiniApp } from '@farcaster/miniapp-wagmi-connector'
+import { farcasterFrame as farcasterMiniApp } from '@farcaster/frame-wagmi-connector'
 import sdk from '@farcaster/frame-sdk'
 
 const config = createConfig({
