@@ -488,13 +488,12 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="py-8 px-6 text-center border-t" style={{ borderColor: 'rgba(124,58,237,0.2)' }}>
         <div style={{ fontFamily: '"Press Start 2P", monospace', fontSize: 8, color: '#4c1d95' }}>
-          FARFLAPPY © 2025 · BUILT ON BASE · POWERED BY FARCASTER
+          FARFLAPPY © 2026 · BUILT ON BASE
         </div>
         <div className="flex gap-6 justify-center mt-4">
           {[
             { label: 'WARPCAST', href: 'https://warpcast.com' },
             { label: 'BASESCAN', href: `https://basescan.org/address/0x90Cc4bE2a247cE6957C27c59aCdee4195d978dF5` },
-            { label: 'GITHUB', href: 'https://github.com/nothing010101/farflappy' },
           ].map(({ label, href }) => (
             <a key={label} href={href} target="_blank" rel="noopener noreferrer"
               className="hover:text-violet-400 transition-colors"
