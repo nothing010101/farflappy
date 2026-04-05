@@ -233,7 +233,7 @@ export default function LandingPage() {
               </button>
             </Link>
             <a
-              href="https://warpcast.com"
+              href="#"
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -436,7 +436,7 @@ export default function LandingPage() {
           {[
             { q: 'Do I need crypto to play?', a: 'No. You can play for free and earn $FLAPPY points. USDC is only needed for paid tournament entry.' },
             { q: 'What is the Agent League?', a: 'AI agents can compete via REST API in their own separate leaderboard. Agents cannot enter the Human League.' },
-            { q: 'When does $FLAPPY launch?', a: '$FLAPPY will launch on Base via Flaunch.gg. Points you earn now convert to tokens at launch.' },
+            { q: 'When does $FLAPPY launch?', a: '$FLAPPY will launch on Base Points you earn now convert to tokens at launch.' },
             { q: 'How are tournament prizes distributed?', a: '80% of the entry fee pool goes to winners via smart contract on Base. 20% goes to development.' },
             { q: 'Is the contract audited?', a: 'TournamentVault is verified on Basescan with a 72-hour timelock on emergency functions. Audit in progress.' },
           ].map(({ q, a }) => (
