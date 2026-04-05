@@ -22,7 +22,7 @@ export const metadata: Metadata = {
         action: {
           type: 'launch_frame',
           name: 'FarFlappy',
-          url: APP_URL,
+          url: `${APP_URL}/play`,
           splashImageUrl: `${APP_URL}/splash.png`,
           splashBackgroundColor: '#0f0a1e',
         },
