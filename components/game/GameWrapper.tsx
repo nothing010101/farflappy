@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import { useAccount } from 'wagmi'
 import { usePlayerStore } from '@/store/playerStore'
 import { supabase } from '@/lib/supabase'
+import { useChiptune } from '@/hooks/useChiptune'
 import type { GameState } from './GameEngine'
 
 const GameEngine = dynamic(() => import('./GameEngine'), { ssr: false })
@@ -16,15 +17,29 @@ export default function GameWrapper() {
   const [currentState, setCurrentState] = useState<GameState | null>(null)
   const [finalState, setFinalState] = useState<GameState | null>(null)
   const [isPaused, setIsPaused] = useState(false)
+  const [muted, setMuted] = useState(false)
   const startTime = useRef<number>(0)
-  const { address } = useAccount()
+  const musicCleanup = useRef<(() => void) | undefined>()
   const { player } = usePlayerStore()
+
+  const {
+    startMusic,
+    stopMusic,
+    sfxJump,
+    sfxCoin,
+    sfxDeath,
+    sfxItem,
+    sfxScore,
+    toggleMute,
+  } = useChiptune()
 
   const handleScoreUpdate = useCallback((state: GameState) => {
     setCurrentState(state)
   }, [])
 
   const handleGameOver = useCallback(async (state: GameState) => {
+    sfxDeath()
+    stopMusic()
     setPhase('dead')
     setFinalState(state)
 
@@ -32,7 +47,6 @@ export default function GameWrapper() {
 
     const duration = Math.floor((Date.now() - startTime.current) / 1000)
 
-    // Save session
     await supabase.from('game_sessions').insert({
       player_id: player.id,
       score: state.score,
@@ -42,40 +56,47 @@ export default function GameWrapper() {
       session_type: 'casual',
     })
 
-    // Upsert daily leaderboard
     await supabase.rpc('upsert_daily_score', {
       p_player_id: player.id,
       p_player_type: player.player_type,
       p_score: state.score,
     })
 
-    // Update player totals
     await supabase.from('players').update({
       total_score: player.total_score + state.score,
       games_played: player.games_played + 1,
       flappy_points: player.flappy_points + Math.floor(state.score / 10),
     }).eq('id', player.id)
 
-  }, [player])
+  }, [player, sfxDeath, stopMusic])
 
   const startGame = () => {
     setPhase('playing')
     setFinalState(null)
     startTime.current = Date.now()
+    const cleanup = startMusic()
+    if (cleanup) musicCleanup.current = cleanup
   }
+
+  const handleToggleMute = () => {
+    const nowMuted = toggleMute()
+    setMuted(nowMuted)
+  }
+
+  // Cleanup music on unmount
+  useEffect(() => {
+    return () => {
+      stopMusic()
+    }
+  }, [stopMusic])
 
   if (phase === 'idle') {
     return (
       <div className="flex flex-col items-center justify-center h-full gap-6 p-6">
-        {/* Pixel bird preview */}
         <div className="pixel-font text-center">
           <div className="text-4xl mb-2">🐦</div>
-          <div className="text-farcaster-light text-xs leading-relaxed">
-            TAP TO JUMP
-          </div>
-          <div className="text-text-muted text-xs mt-1">
-            AVOID THE PIPES
-          </div>
+          <div className="text-farcaster-light text-xs leading-relaxed">TAP TO JUMP</div>
+          <div className="text-text-muted text-xs mt-1">AVOID THE PIPES</div>
         </div>
 
         {player && (
@@ -86,7 +107,7 @@ export default function GameWrapper() {
         )}
 
         <button className="btn-primary text-sm px-8 py-4" onClick={startGame}>
-          {player ? 'PLAY' : 'CONNECT WALLET FIRST'}
+          {player ? '🎮 PLAY' : '🎮 PLAY (GUEST)'}
         </button>
 
         {player && (
@@ -94,6 +115,14 @@ export default function GameWrapper() {
             <span className="text-farcaster-light">{player.flappy_points}</span> $FLAPPY points earned
           </div>
         )}
+
+        {/* Mute toggle on idle screen */}
+        <button
+          onClick={handleToggleMute}
+          className="text-xs text-text-muted hover:text-text transition-colors"
+        >
+          {muted ? '🔇 Sound OFF' : '🔊 Sound ON'}
+        </button>
       </div>
     )
   }
@@ -141,20 +170,33 @@ export default function GameWrapper() {
 
   return (
     <div className="relative w-full h-full">
-      {/* Live score overlay */}
+      {/* Score overlay */}
       {currentState && (
-        <div className="absolute top-2 left-2 z-10 flex gap-2">
+        <div className="absolute top-2 left-2 z-10">
           <div className="bg-black/50 rounded px-2 py-1">
             <span className="pixel-font text-pixel text-xs">{currentState.score}</span>
           </div>
         </div>
       )}
 
+      {/* Mute button */}
+      <button
+        onClick={handleToggleMute}
+        className="absolute top-2 right-2 z-10 bg-black/50 rounded px-2 py-1 text-sm"
+        style={{ lineHeight: 1 }}
+      >
+        {muted ? '🔇' : '🔊'}
+      </button>
+
       <GameEngine
         onScoreUpdate={handleScoreUpdate}
         onGameOver={handleGameOver}
         playerItems={player?.items || {}}
         isPaused={isPaused}
+        onJump={sfxJump}
+        onCoin={sfxCoin}
+        onItem={sfxItem}
+        onPipe={sfxScore}
       />
     </div>
   )
