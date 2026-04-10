@@ -6,21 +6,21 @@ import { sdk } from '@farcaster/miniapp-sdk'
 import { usePlayerStore } from '@/store/playerStore'
 import dynamic from 'next/dynamic'
 
+const HomeScreen = dynamic(() => import('@/components/HomeScreen'), { ssr: false })
 const GameWrapper = dynamic(() => import('@/components/game/GameWrapper'), { ssr: false })
 const Leaderboard = dynamic(() => import('@/components/Leaderboard'), { ssr: false })
 const Profile = dynamic(() => import('@/components/Profile'), { ssr: false })
 const Shop = dynamic(() => import('@/components/Shop'), { ssr: false })
 const Tournament = dynamic(() => import('@/components/Tournament'), { ssr: false })
 
-type Tab = 'game' | 'leaderboard' | 'tournament' | 'shop' | 'profile'
+type Tab = 'home' | 'game' | 'leaderboard' | 'tournament' | 'shop' | 'profile'
 
 export default function Home() {
-  const [tab, setTab] = useState<Tab>('game')
+  const [tab, setTab] = useState<Tab>('home')
   const { address, isConnected } = useAccount()
   const { connect, connectors } = useConnect()
   const { fetchOrCreatePlayer, player } = usePlayerStore()
 
-  // Auto-connect via Farcaster SDK
   useEffect(() => {
     const init = async () => {
       try {
@@ -35,7 +35,6 @@ export default function Home() {
     init()
   }, [connect, connectors])
 
-  // Fetch/create player after wallet connects
   useEffect(() => {
     if (!address) return
     const init = async () => {
@@ -55,6 +54,7 @@ export default function Home() {
   }, [address, fetchOrCreatePlayer])
 
   const tabs: { key: Tab; label: string; icon: string }[] = [
+    { key: 'home', label: 'HOME', icon: '🏠' },
     { key: 'game', label: 'PLAY', icon: '🎮' },
     { key: 'leaderboard', label: 'RANKS', icon: '🏆' },
     { key: 'tournament', label: 'EVENT', icon: '⚔️' },
@@ -72,7 +72,6 @@ export default function Home() {
         <div className="pixel-font text-farcaster-light text-xs tracking-wider">
           FAR<span className="text-pixel">FLAPPY</span>
         </div>
-
         {!isConnected ? (
           <button
             className="btn-primary text-xs py-2 px-3"
@@ -94,6 +93,12 @@ export default function Home() {
 
       {/* Content */}
       <div className="flex-1 overflow-hidden">
+        {tab === 'home' && (
+          <HomeScreen
+            onPlay={() => setTab('game')}
+            onTab={(t) => setTab(t as Tab)}
+          />
+        )}
         {tab === 'game' && <GameWrapper />}
         {tab === 'leaderboard' && <Leaderboard />}
         {tab === 'tournament' && <Tournament />}
@@ -114,7 +119,7 @@ export default function Home() {
             }`}
           >
             <span className="text-base">{icon}</span>
-            <span className="pixel-font text-xs" style={{ fontSize: 7 }}>{label}</span>
+            <span className="pixel-font" style={{ fontSize: 7 }}>{label}</span>
           </button>
         ))}
       </div>
