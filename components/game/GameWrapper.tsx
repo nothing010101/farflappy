@@ -191,8 +191,31 @@ export default function GameWrapper({ sessionType = 'casual' }: { sessionType?: 
     }
 
     const handleStartGameWithItems = async () => {
-      // NOTE: Jangan lupa implementasikan RPC Supabase di sini untuk MENGURANGI item dari DB
-      // Contoh: await supabase.rpc('consume_items', { items: selectedItems })
+      if (selectedItems.length > 0 && player) {
+        const updatedItems = { ...player.items };
+        
+        selectedItems.forEach(itemKey => {
+          if (updatedItems[itemKey] && updatedItems[itemKey] > 0) {
+            updatedItems[itemKey] -= 1;
+          }
+        });
+
+        const { error } = await supabase
+          .from('players')
+          .update({ items: updatedItems })
+          .eq('id', player.id);
+
+        if (error) {
+          console.error("Gagal mengurangi item di database:", error);
+          alert("Gagal memproses penggunaan item. Periksa koneksi Anda.");
+          return;
+        }
+
+        usePlayerStore.setState({ 
+          player: { ...player, items: updatedItems } 
+        });
+      }
+
       startGame();
     }
 
@@ -207,7 +230,7 @@ export default function GameWrapper({ sessionType = 'casual' }: { sessionType?: 
              <div className="text-center text-text-muted text-xs">No items available to equip</div>
           ) : (
             availableItems.map(([itemKey, qty]) => {
-              if (itemKey === 'vip') return null; // VIP bukan item in-game equip
+              if (itemKey === 'vip') return null;
               const isSelected = selectedItems.includes(itemKey);
               return (
                 <button
