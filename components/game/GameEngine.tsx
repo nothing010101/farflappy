@@ -44,6 +44,7 @@ interface GameEngineProps {
   onScoreUpdate: (state: GameState) => void
   onGameOver: (finalState: GameState) => void
   playerItems: Record<string, number>
+  startingItems?: string[]
   isPaused: boolean
   gameMode: GameMode
   sessionType: SessionType
@@ -188,7 +189,7 @@ function drawItem(ctx: CanvasRenderingContext2D, item: Item, frame: number) {
 // ─── Main ─────────────────────────────────────────────────
 
 export default function GameEngine({
-  onScoreUpdate, onGameOver, playerItems, isPaused,
+  onScoreUpdate, onGameOver, playerItems, startingItems = [], isPaused,
   gameMode, sessionType, onJump, onCoin, onItem, onPipe,
 }: GameEngineProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -247,6 +248,28 @@ export default function GameEngine({
       if (ex) { ex.endsAt = now + durationMs }
       else { s.activeEffects.push({ type, endsAt: now + durationMs }) }
     }
+
+    // ─── INJEKSI ITEM AWAL (STARTING ITEMS) ───
+    const applyStartingItems = () => {
+      const durations: Record<string, number> = {
+        shield: 30000,
+        flash: 15000,
+        slow: 10000,
+        double: 20000,
+        magnet: 15000,
+        extralife: 999999
+      };
+
+      startingItems.forEach(itemType => {
+        if (durations[itemType]) {
+          addEffect(itemType, durations[itemType]);
+        }
+      });
+    };
+    
+    // Panggil fungsi injeksi satu kali sebelum loop pertama kali berjalan
+    applyStartingItems();
+    // ──────────────────────────────────────────
 
     function getPipeSpeed() {
       // Base speed from game mode
@@ -417,7 +440,8 @@ export default function GameEngine({
           const dx = BIRD_X + BIRD_SIZE / 2 - coin.x
           const dy = s.bird.y + BIRD_SIZE / 2 - coin.y
           if (Math.sqrt(dx * dx + dy * dy) < 120) {
-            coin.x += dx * 0.15; coin.y += dy * 0.15
+            coin.x += dx * 0.15;
+            coin.y += dy * 0.15
           }
         }
       }
@@ -487,7 +511,7 @@ export default function GameEngine({
 
     animFrameRef.current = requestAnimationFrame(loop)
     return () => { if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current) }
-  }, [onScoreUpdate, onGameOver])
+  }, [onScoreUpdate, onGameOver, startingItems])
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => { if (e.code === 'Space') { e.preventDefault(); jump() } }
