@@ -13,9 +13,9 @@ const GameEngine = dynamic(() => import('./GameEngine'), { ssr: false })
 type GamePhase = 'idle' | 'mode_select' | 'playing' | 'dead'
 
 const MODES: { key: GameMode; desc: string; vip?: boolean }[] = [
-  { key: 'easy',   desc: 'Slow speed · Chill vibes' },
+  { key: 'easy',   desc: 'Very slow · Big gaps · Chill' },
   { key: 'medium', desc: 'Normal speed · Classic feel' },
-  { key: 'expert', desc: 'Fast speed · Real challenge' },
+  { key: 'expert', desc: 'Fast · Tight gaps · Challenge' },
   { key: 'insane', desc: 'Extreme speed · VIP only', vip: true },
 ]
 
@@ -243,6 +243,7 @@ export default function GameWrapper({ sessionType = 'casual' }: { sessionType?: 
         {muted ? '🔇' : '🔊'}
       </button>
       <GameEngine
+        key={gameMode}
         onScoreUpdate={handleScoreUpdate}
         onGameOver={handleGameOver}
         playerItems={player?.items || {}}
