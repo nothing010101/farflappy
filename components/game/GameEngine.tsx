@@ -28,7 +28,7 @@ interface ActiveEffect {
   endsAt: number
 }
 
-export type GameMode = 'normal' | 'degen' | 'extreme' | 'insane'
+export type GameMode = 'easy' | 'medium' | 'expert' | 'insane'
 export type SessionType = 'casual' | 'tournament'
 
 export interface GameState {
@@ -53,68 +53,65 @@ interface GameEngineProps {
   onPipe?: () => void
 }
 
-// Score multipliers per mode
-export const MODE_MULTIPLIERS: Record<GameMode, number> = {
-  normal: 1,
-  degen: 3,
-  extreme: 5,
-  insane: 10,
+export const MODE_SPEED: Record<GameMode, number> = {
+  easy:   1.0,
+  medium: 1.5,
+  expert: 2.2,
+  insane: 3.2,
 }
 
 export const MODE_LABELS: Record<GameMode, string> = {
-  normal: 'NORMAL',
-  degen: 'DEGEN',
-  extreme: 'EXTREME',
+  easy:   'EASY',
+  medium: 'MEDIUM',
+  expert: 'EXPERT',
   insane: 'INSANE',
 }
 
 export const MODE_COLORS: Record<GameMode, string> = {
-  normal: '#a78bfa',
-  degen: '#f59e0b',
-  extreme: '#ef4444',
+  easy:   '#10b981',
+  medium: '#f59e0b',
+  expert: '#ef4444',
   insane: '#f5d020',
 }
 
 const GRAVITY = 0.35
 const JUMP_FORCE = -7
 const PIPE_WIDTH = 52
-const PIPE_GAP_BASE = 165     // slightly wider than before
-const PIPE_GAP_SLOW = 210     // much wider when slow active
-const PIPE_SPEED_BASE = 2.2
+const PIPE_GAP_BASE = 165
+const PIPE_GAP_SLOW = 215
 const BIRD_X = 80
 const BIRD_SIZE = 28
 const COIN_SIZE = 10
 const ITEM_SIZE = 18
 const SCORE_PER_PIPE = 10
 
-// Tournament speed tiers (based on raw score before multiplier)
-function getTournamentSpeedMult(rawScore: number): number {
-  if (rawScore > 10000) return 2.0
-  if (rawScore > 3000) return 1.8
-  if (rawScore > 1000) return 1.5
+// Tournament speed multiplier based on score
+function getTournamentSpeedMult(score: number): number {
+  if (score > 10000) return 2.0
+  if (score > 3000) return 1.8
+  if (score > 1000) return 1.5
   return 1.0
 }
 
-function getTournamentSpeedTier(rawScore: number): number {
-  if (rawScore > 10000) return 4
-  if (rawScore > 3000) return 3
-  if (rawScore > 1000) return 2
+function getTournamentSpeedTier(score: number): number {
+  if (score > 10000) return 4
+  if (score > 3000) return 3
+  if (score > 1000) return 2
   return 1
 }
 
-// Item spawn rates — slow rate boosted at high speed
-function getSpawnRates(speedTier: number, hasSlow: boolean) {
+function getSpawnRates(speedTier: number) {
   return {
-    shield: 0.02,
-    flash: 0.001,
-    slow: speedTier >= 3 ? 0.05 : 0.01,  // 5% at 1.8x+ speed
-    double: 0.005,
-    magnet: 0.01,
+    shield:    0.02,
+    flash:     0.001,
+    slow:      speedTier >= 3 ? 0.05 : 0.01,
+    double:    0.005,
+    magnet:    0.01,
     extralife: 0.0005,
   }
 }
 
-// ─── Drawing helpers ──────────────────────────────────────
+// ─── Drawing ──────────────────────────────────────────────
 
 function drawPixelRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, color: string) {
   ctx.fillStyle = color
@@ -182,19 +179,11 @@ function drawItem(ctx: CanvasRenderingContext2D, item: Item, frame: number) {
   ctx.restore()
 }
 
-// ─── Main Component ───────────────────────────────────────
+// ─── Main ─────────────────────────────────────────────────
 
 export default function GameEngine({
-  onScoreUpdate,
-  onGameOver,
-  playerItems,
-  isPaused,
-  gameMode,
-  sessionType,
-  onJump,
-  onCoin,
-  onItem,
-  onPipe,
+  onScoreUpdate, onGameOver, playerItems, isPaused,
+  gameMode, sessionType, onJump, onCoin, onItem, onPipe,
 }: GameEngineProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const stateRef = useRef({
@@ -203,8 +192,7 @@ export default function GameEngine({
     coins: [] as Coin[],
     items: [] as Item[],
     activeEffects: [] as ActiveEffect[],
-    rawScore: 0,        // score before multiplier
-    score: 0,           // display score (after multiplier)
+    score: 0,
     pipesPassed: 0,
     coinsCollected: 0,
     frame: 0,
@@ -249,52 +237,43 @@ export default function GameEngine({
 
     function addEffect(type: string, durationMs: number) {
       const now = Date.now()
-      const existing = s.activeEffects.find(e => e.type === type)
-      if (existing) { existing.endsAt = now + durationMs }
+      const ex = s.activeEffects.find(e => e.type === type)
+      if (ex) { ex.endsAt = now + durationMs }
       else { s.activeEffects.push({ type, endsAt: now + durationMs }) }
     }
 
-    function getModeMultiplier() {
-      return MODE_MULTIPLIERS[gameModeRef.current]
-    }
-
-    function getTournamentMult() {
-      if (sessionTypeRef.current !== 'tournament') return 1
-      return getTournamentSpeedMult(s.rawScore)
-    }
-
     function getPipeSpeed() {
-      let speed = PIPE_SPEED_BASE
-      // Tournament speed tiers
-      speed *= getTournamentMult()
-      // Item effects
-      if (hasEffect('flash')) speed *= 2.5
-      else if (hasEffect('slow')) speed *= 0.5
+      // Base speed from game mode
+      let speed = MODE_SPEED[gameModeRef.current]
+
+      // Tournament adds on top of mode speed
+      if (sessionTypeRef.current === 'tournament') {
+        speed *= getTournamentSpeedMult(s.score)
+      }
+
+      // Item effects override proportionally
+      if (hasEffect('flash')) speed *= 1.8
+      else if (hasEffect('slow')) speed *= 0.45
+
       return speed
     }
 
     function getScoreMultiplier() {
-      let mult = getModeMultiplier()
+      let mult = 1
       if (hasEffect('double')) mult *= 2
       if (hasEffect('flash')) mult *= 2
       return mult
     }
 
     function getCurrentGap() {
-      // Wider gap when slow is active — prevents instant death
       return hasEffect('slow') ? PIPE_GAP_SLOW : PIPE_GAP_BASE
     }
 
     function spawnItem(x: number, midY: number) {
-      const tier = s.speedTier
-      const rates = getSpawnRates(tier, hasEffect('slow'))
+      const rates = getSpawnRates(s.speedTier)
       for (const [type, rate] of Object.entries(rates)) {
         if (Math.random() < rate) {
-          s.items.push({
-            x, y: midY + (Math.random() - 0.5) * 60,
-            type: type as Item['type'],
-            collected: false,
-          })
+          s.items.push({ x, y: midY + (Math.random() - 0.5) * 60, type: type as Item['type'], collected: false })
           break
         }
       }
@@ -303,11 +282,7 @@ export default function GameEngine({
     function spawnCoinChain(x: number, midY: number) {
       const count = 5 + Math.floor(Math.random() * 3)
       for (let i = 0; i < count; i++) {
-        s.coins.push({
-          x: x + i * 22,
-          y: midY + Math.sin(i * 0.8) * 30,
-          collected: false,
-        })
+        s.coins.push({ x: x + i * 22, y: midY + Math.sin(i * 0.8) * 30, collected: false })
       }
     }
 
@@ -338,33 +313,30 @@ export default function GameEngine({
     }
 
     function drawHUD() {
-      // Score
       ctx.fillStyle = '#f5d020'
       ctx.font = '10px "Press Start 2P"'
       ctx.textAlign = 'center'
       ctx.fillText(`${s.score}`, canvas!.width / 2, 30)
 
-      // Mode badge
-      const modeColor = MODE_COLORS[gameModeRef.current]
-      ctx.fillStyle = modeColor
+      // Mode badge top-left
+      ctx.fillStyle = MODE_COLORS[gameModeRef.current]
       ctx.font = '6px "Press Start 2P"'
       ctx.textAlign = 'left'
-      ctx.fillText(MODE_LABELS[gameModeRef.current], 8, 12)
+      ctx.fillText(MODE_LABELS[gameModeRef.current], 8, 14)
 
-      // Tournament speed tier
+      // Tournament speed tier indicator
       if (sessionTypeRef.current === 'tournament' && s.speedTier > 1) {
-        const tierColors = ['', '#a78bfa', '#f59e0b', '#ef4444', '#f5d020']
+        const tierColors = ['', '', '#f59e0b', '#ef4444', '#f5d020']
+        const tierLabels = ['', '', '⚡1.5x', '⚡1.8x', '⚡2x']
         ctx.fillStyle = tierColors[s.speedTier] || '#fff'
         ctx.font = '6px "Press Start 2P"'
         ctx.textAlign = 'left'
-        const tierLabels = ['', '', '1.5x', '1.8x', '2x']
-        ctx.fillText(`⚡${tierLabels[s.speedTier]}`, 8, 24)
+        ctx.fillText(tierLabels[s.speedTier], 8, 26)
       }
 
-      // Active effects
+      // Active effects top-right
       const now = Date.now()
-      const active = s.activeEffects.filter(e => e.endsAt > now)
-      active.forEach((effect, i) => {
+      s.activeEffects.filter(e => e.endsAt > now).forEach((effect, i) => {
         const remaining = Math.ceil((effect.endsAt - now) / 1000)
         const colors: Record<string, string> = {
           shield: '#7c3aed', flash: '#f5d020', slow: '#06b6d4',
@@ -373,10 +345,9 @@ export default function GameEngine({
         ctx.fillStyle = colors[effect.type] || '#fff'
         ctx.font = '6px "Press Start 2P"'
         ctx.textAlign = 'right'
-        ctx.fillText(`${effect.type.toUpperCase()} ${remaining}s`, canvas!.width - 8, 12 + i * 14)
+        ctx.fillText(`${effect.type.slice(0, 3).toUpperCase()} ${remaining}s`, canvas!.width - 8, 14 + i * 14)
       })
 
-      // Score multiplier
       const mult = getScoreMultiplier()
       if (mult > 1) {
         ctx.fillStyle = '#f5d020'
@@ -394,21 +365,20 @@ export default function GameEngine({
 
       s.frame++
 
-      // Update speed tier for tournament
+      // Update tournament speed tier
       if (sessionTypeRef.current === 'tournament') {
-        s.speedTier = getTournamentSpeedTier(s.rawScore)
+        s.speedTier = getTournamentSpeedTier(s.score)
       }
 
       const speed = getPipeSpeed()
 
-      // Bird physics
       s.bird.vy += GRAVITY
       s.bird.y += s.bird.vy
       s.angle = Math.max(-0.5, Math.min(1.2, s.bird.vy * 0.08))
 
       // Spawn pipes
       s.pipeTimer++
-      const pipeInterval = Math.max(90, 130 - s.pipesPassed * 0.5)
+      const pipeInterval = Math.max(80, 130 - s.pipesPassed * 0.4)
       if (s.pipeTimer >= pipeInterval) {
         s.pipeTimer = 0
         const gap = getCurrentGap()
@@ -427,28 +397,23 @@ export default function GameEngine({
         if (!pipe.passed && pipe.x + PIPE_WIDTH < BIRD_X) {
           pipe.passed = true
           s.pipesPassed++
-          const rawAdd = SCORE_PER_PIPE
-          s.rawScore += rawAdd
-          s.score += rawAdd * getScoreMultiplier()
+          s.score += SCORE_PER_PIPE * getScoreMultiplier()
           onPipeRef.current?.()
         }
       }
 
-      // Move coins
+      // Move & collect coins
       const magnetActive = hasEffect('magnet')
       for (const coin of s.coins) {
         coin.x -= speed
         if (magnetActive) {
           const dx = BIRD_X + BIRD_SIZE / 2 - coin.x
           const dy = s.bird.y + BIRD_SIZE / 2 - coin.y
-          const dist = Math.sqrt(dx * dx + dy * dy)
-          if (dist < 120) { coin.x += dx * 0.15; coin.y += dy * 0.15 }
+          if (Math.sqrt(dx * dx + dy * dy) < 120) {
+            coin.x += dx * 0.15; coin.y += dy * 0.15
+          }
         }
       }
-
-      for (const item of s.items) { item.x -= speed }
-
-      // Collect coins
       for (const coin of s.coins) {
         if (coin.collected) continue
         const dx = coin.x - (BIRD_X + BIRD_SIZE / 2)
@@ -456,14 +421,13 @@ export default function GameEngine({
         if (Math.sqrt(dx * dx + dy * dy) < BIRD_SIZE / 2 + COIN_SIZE) {
           coin.collected = true
           s.coinsCollected++
-          const rawAdd = 2
-          s.rawScore += rawAdd
-          s.score += rawAdd * getScoreMultiplier()
+          s.score += 2 * getScoreMultiplier()
           onCoinRef.current?.()
         }
       }
 
-      // Collect items
+      // Move & collect items
+      for (const item of s.items) { item.x -= speed }
       for (const item of s.items) {
         if (item.collected) continue
         const dx = item.x - (BIRD_X + BIRD_SIZE / 2)
@@ -472,11 +436,11 @@ export default function GameEngine({
           item.collected = true
           onItemRef.current?.()
           switch (item.type) {
-            case 'shield': addEffect('shield', 30000); break
-            case 'flash': addEffect('flash', 15000); break
-            case 'slow': addEffect('slow', 10000); break
-            case 'double': addEffect('double', 20000); break
-            case 'magnet': addEffect('magnet', 15000); break
+            case 'shield':    addEffect('shield', 30000); break
+            case 'flash':     addEffect('flash', 15000); break
+            case 'slow':      addEffect('slow', 10000); break
+            case 'double':    addEffect('double', 20000); break
+            case 'magnet':    addEffect('magnet', 15000); break
             case 'extralife': addEffect('extralife', 999999); break
           }
         }
@@ -495,14 +459,7 @@ export default function GameEngine({
           s.bird.vy = JUMP_FORCE
         } else {
           s.isAlive = false
-          onGameOver({
-            score: s.score,
-            pipes: s.pipesPassed,
-            coins: s.coinsCollected,
-            isAlive: false,
-            activeEffects: s.activeEffects,
-            speedTier: s.speedTier,
-          })
+          onGameOver({ score: s.score, pipes: s.pipesPassed, coins: s.coinsCollected, isAlive: false, activeEffects: s.activeEffects, speedTier: s.speedTier })
           return
         }
       }
@@ -515,14 +472,7 @@ export default function GameEngine({
       drawHUD()
 
       if (s.frame % 30 === 0) {
-        onScoreUpdate({
-          score: s.score,
-          pipes: s.pipesPassed,
-          coins: s.coinsCollected,
-          isAlive: true,
-          activeEffects: s.activeEffects,
-          speedTier: s.speedTier,
-        })
+        onScoreUpdate({ score: s.score, pipes: s.pipesPassed, coins: s.coinsCollected, isAlive: true, activeEffects: s.activeEffects, speedTier: s.speedTier })
       }
 
       animFrameRef.current = requestAnimationFrame(loop)
@@ -533,18 +483,14 @@ export default function GameEngine({
   }, [onScoreUpdate, onGameOver])
 
   useEffect(() => {
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.code === 'Space') { e.preventDefault(); jump() }
-    }
+    const handleKey = (e: KeyboardEvent) => { if (e.code === 'Space') { e.preventDefault(); jump() } }
     window.addEventListener('keydown', handleKey)
     return () => window.removeEventListener('keydown', handleKey)
   }, [jump])
 
   return (
     <canvas
-      ref={canvasRef}
-      width={390}
-      height={600}
+      ref={canvasRef} width={390} height={600}
       onClick={jump}
       onTouchStart={(e) => { e.preventDefault(); jump() }}
       className="w-full h-full cursor-pointer"
