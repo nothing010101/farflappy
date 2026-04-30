@@ -92,7 +92,26 @@ const COIN_SIZE = 10
 const ITEM_SIZE = 18
 const SCORE_PER_PIPE = 10
 
-// Tournament speed multiplier based on score
+// ─── KONFIGURASI DURASI ITEM ──────────────────────────────
+const NORMAL_DURATIONS: Record<string, number> = {
+  shield: 30000,    // 30 detik
+  flash: 15000,     // 15 detik
+  slow: 15000,      // 15 detik
+  double: 20000,    // 20 detik
+  magnet: 15000,    // 15 detik
+  extralife: 999999 // Infinite hingga dipakai
+}
+
+const PURCHASED_DURATIONS: Record<string, number> = {
+  shield: 120000,   // 2 menit (120 detik)
+  flash: 60000,     // 1 menit (60 detik)
+  slow: 60000,      // 1 menit (60 detik)
+  double: 90000,    // 1.5 menit (90 detik)
+  magnet: 90000,    // 1.5 menit (90 detik)
+  extralife: 999999
+}
+// ──────────────────────────────────────────────────────────
+
 function getTournamentSpeedMult(score: number): number {
   if (score > 10000) return 2.0
   if (score > 3000) return 1.8
@@ -249,38 +268,23 @@ export default function GameEngine({
       else { s.activeEffects.push({ type, endsAt: now + durationMs }) }
     }
 
-    // ─── INJEKSI ITEM AWAL (STARTING ITEMS) ───
     const applyStartingItems = () => {
-      const durations: Record<string, number> = {
-        shield: 30000,
-        flash: 15000,
-        slow: 10000,
-        double: 20000,
-        magnet: 15000,
-        extralife: 999999
-      };
-
       startingItems.forEach(itemType => {
-        if (durations[itemType]) {
-          addEffect(itemType, durations[itemType]);
+        if (PURCHASED_DURATIONS[itemType]) {
+          addEffect(itemType, PURCHASED_DURATIONS[itemType]);
         }
       });
     };
     
-    // Panggil fungsi injeksi satu kali sebelum loop pertama kali berjalan
     applyStartingItems();
-    // ──────────────────────────────────────────
 
     function getPipeSpeed() {
-      // Base speed from game mode
       let speed = MODE_SPEED[gameModeRef.current]
 
-      // Tournament adds on top of mode speed
       if (sessionTypeRef.current === 'tournament') {
         speed *= getTournamentSpeedMult(s.score)
       }
 
-      // Item effects override proportionally
       if (hasEffect('flash')) speed *= 1.8
       else if (hasEffect('slow')) speed *= 0.45
 
@@ -348,13 +352,11 @@ export default function GameEngine({
       ctx.textAlign = 'center'
       ctx.fillText(`${s.score}`, canvas!.width / 2, 30)
 
-      // Mode badge top-left
       ctx.fillStyle = MODE_COLORS[gameModeRef.current]
       ctx.font = '6px "Press Start 2P"'
       ctx.textAlign = 'left'
       ctx.fillText(MODE_LABELS[gameModeRef.current], 8, 14)
 
-      // Tournament speed tier indicator
       if (sessionTypeRef.current === 'tournament' && s.speedTier > 1) {
         const tierColors = ['', '', '#f59e0b', '#ef4444', '#f5d020']
         const tierLabels = ['', '', '⚡1.5x', '⚡1.8x', '⚡2x']
@@ -364,7 +366,6 @@ export default function GameEngine({
         ctx.fillText(tierLabels[s.speedTier], 8, 26)
       }
 
-      // Active effects top-right
       const now = Date.now()
       s.activeEffects.filter(e => e.endsAt > now).forEach((effect, i) => {
         const remaining = Math.ceil((effect.endsAt - now) / 1000)
@@ -395,7 +396,6 @@ export default function GameEngine({
 
       s.frame++
 
-      // Update tournament speed tier
       if (sessionTypeRef.current === 'tournament') {
         s.speedTier = getTournamentSpeedTier(s.score)
       }
@@ -406,7 +406,6 @@ export default function GameEngine({
       s.bird.y += s.bird.vy
       s.angle = Math.max(-0.5, Math.min(1.2, s.bird.vy * 0.08))
 
-      // Spawn pipes
       s.pipeTimer++
       const pipeInterval = Math.max(80, 130 - s.pipesPassed * 0.4)
       if (s.pipeTimer >= pipeInterval) {
@@ -420,7 +419,6 @@ export default function GameEngine({
         spawnItem(canvas!.width + PIPE_WIDTH + 60, midY)
       }
 
-      // Move pipes
       s.pipes = s.pipes.filter(p => p.x + PIPE_WIDTH > -10)
       for (const pipe of s.pipes) {
         pipe.x -= speed
@@ -432,7 +430,6 @@ export default function GameEngine({
         }
       }
 
-      // Move & collect coins
       const magnetActive = hasEffect('magnet')
       for (const coin of s.coins) {
         coin.x -= speed
@@ -457,7 +454,6 @@ export default function GameEngine({
         }
       }
 
-      // Move & collect items
       for (const item of s.items) { item.x -= speed }
       for (const item of s.items) {
         if (item.collected) continue
@@ -466,13 +462,10 @@ export default function GameEngine({
         if (Math.sqrt(dx * dx + dy * dy) < BIRD_SIZE / 2 + ITEM_SIZE) {
           item.collected = true
           onItemRef.current?.()
-          switch (item.type) {
-            case 'shield':    addEffect('shield', 30000); break
-            case 'flash':     addEffect('flash', 15000); break
-            case 'slow':      addEffect('slow', 10000); break
-            case 'double':    addEffect('double', 20000); break
-            case 'magnet':    addEffect('magnet', 15000); break
-            case 'extralife': addEffect('extralife', 999999); break
+          
+          // MENGGUNAKAN DURASI NORMAL UNTUK ITEM SPAWN
+          if (NORMAL_DURATIONS[item.type]) {
+             addEffect(item.type, NORMAL_DURATIONS[item.type])
           }
         }
       }
@@ -481,7 +474,6 @@ export default function GameEngine({
       s.items = s.items.filter(i => !i.collected && i.x > -20)
       s.activeEffects = s.activeEffects.filter(e => e.endsAt > Date.now())
 
-      // Collision
       const isInvincible = hasEffect('shield') || hasEffect('flash')
       if (!isInvincible && checkCollision(BIRD_X, s.bird.y)) {
         if (hasEffect('extralife') && !s.extraLifeUsed) {
