@@ -10,7 +10,7 @@ import { MODE_LABELS, MODE_COLORS, MODE_SPEED } from './GameEngine'
 
 const GameEngine = dynamic(() => import('./GameEngine'), { ssr: false })
 
-type GamePhase = 'idle' | 'mode_select' | 'playing' | 'dead'
+type GamePhase = 'idle' | 'mode_select' | 'item_select' | 'playing' | 'dead'
 
 const MODES: { key: GameMode; desc: string; vip?: boolean }[] = [
   { key: 'easy',   desc: 'Very slow · Big gaps · Chill' },
@@ -26,6 +26,8 @@ export default function GameWrapper({ sessionType = 'casual' }: { sessionType?: 
   const [finalState, setFinalState] = useState<GameState | null>(null)
   const [isPaused] = useState(false)
   const [muted, setMuted] = useState(false)
+  const [selectedItems, setSelectedItems] = useState<string[]>([])
+
   const startTime = useRef<number>(0)
   const { player } = usePlayerStore()
 
@@ -168,8 +170,72 @@ export default function GameWrapper({ sessionType = 'casual' }: { sessionType?: 
           >
             ← BACK
           </button>
-          <button className="btn-primary flex-1 py-3" onClick={startGame} style={{ fontSize: 10 }}>
-            START →
+          <button className="btn-primary flex-1 py-3" onClick={() => setPhase('item_select')} style={{ fontSize: 10 }}>
+            NEXT →
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // ── ITEM SELECT ──
+  if (phase === 'item_select') {
+    const availableItems = Object.entries(player?.items || {}).filter(([_, qty]) => typeof qty === 'number' && qty > 0);
+
+    const toggleItem = (itemKey: string) => {
+      setSelectedItems(prev => 
+        prev.includes(itemKey) 
+          ? prev.filter(i => i !== itemKey) 
+          : [...prev, itemKey]
+      );
+    }
+
+    const handleStartGameWithItems = async () => {
+      // NOTE: Jangan lupa implementasikan RPC Supabase di sini untuk MENGURANGI item dari DB
+      // Contoh: await supabase.rpc('consume_items', { items: selectedItems })
+      startGame();
+    }
+
+    return (
+      <div className="flex flex-col h-full p-5 gap-3">
+        <div className="pixel-font text-farcaster-light text-center mb-2" style={{ fontSize: 11 }}>
+          EQUIP ITEMS
+        </div>
+        
+        <div className="flex flex-col gap-3 flex-1 justify-center overflow-y-auto">
+          {availableItems.filter(([k]) => k !== 'vip').length === 0 ? (
+             <div className="text-center text-text-muted text-xs">No items available to equip</div>
+          ) : (
+            availableItems.map(([itemKey, qty]) => {
+              if (itemKey === 'vip') return null; // VIP bukan item in-game equip
+              const isSelected = selectedItems.includes(itemKey);
+              return (
+                <button
+                  key={itemKey}
+                  onClick={() => toggleItem(itemKey)}
+                  style={{
+                    background: isSelected ? 'rgba(16, 185, 129, 0.2)' : 'rgba(26,16,53,0.8)',
+                    border: `2px solid ${isSelected ? '#10b981' : 'rgba(124,58,237,0.3)'}`,
+                    padding: '14px 16px', borderRadius: 4, display: 'flex', justifyContent: 'space-between',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <span className="pixel-font text-xs" style={{ color: isSelected ? '#10b981' : '#fff' }}>
+                    {itemKey.toUpperCase()}
+                  </span>
+                  <span className="text-xs text-text-muted">Owned: {qty as number}</span>
+                </button>
+              )
+            })
+          )}
+        </div>
+
+        <div className="flex gap-3 mt-2">
+          <button onClick={() => setPhase('mode_select')} className="flex-1 card text-xs pixel-font py-3 text-farcaster-light cursor-pointer hover:bg-farcaster/10 transition-colors" style={{ fontSize: 9 }}>
+            ← BACK
+          </button>
+          <button className="btn-primary flex-1 py-3" onClick={handleStartGameWithItems} style={{ fontSize: 10 }}>
+            START GAME
           </button>
         </div>
       </div>
@@ -181,7 +247,6 @@ export default function GameWrapper({ sessionType = 'casual' }: { sessionType?: 
     return (
       <div className="flex flex-col items-center justify-center h-full gap-4 p-6">
         <div className="pixel-font text-red-400 text-sm">GAME OVER</div>
-
         <div className="card p-4 w-full max-w-xs space-y-3">
           <div className="flex justify-between items-center">
             <span className="text-text-muted text-xs">MODE</span>
@@ -203,14 +268,12 @@ export default function GameWrapper({ sessionType = 'casual' }: { sessionType?: 
           </div>
           {sessionType === 'tournament' && finalState.speedTier > 1 && (
             <div className="flex justify-between items-center">
-              <span className="text-text-muted text-xs">MAX SPEED HIT</span>
-              <span className="pixel-font text-orange-400 text-sm">
-                {['', '1x', '1.5x', '1.8x', '2x'][finalState.speedTier]}
-              </span>
+               <span className="text-text-muted text-xs">SPEED TIER</span>
+               <span className="pixel-font text-red-400 text-sm">{finalState.speedTier}</span>
             </div>
           )}
-          <div className="border-t border-farcaster/20 pt-3 flex justify-between items-center">
-            <span className="text-text-muted text-xs">$FLAPPY POINTS</span>
+          <div className="flex justify-between items-center pt-2 border-t border-farcaster/20">
+            <span className="text-text-muted text-xs">FLAPPY POINTS</span>
             <span className="pixel-font text-green-400 text-sm">+{finalState.score}</span>
           </div>
         </div>
@@ -247,6 +310,7 @@ export default function GameWrapper({ sessionType = 'casual' }: { sessionType?: 
         onScoreUpdate={handleScoreUpdate}
         onGameOver={handleGameOver}
         playerItems={player?.items || {}}
+        startingItems={selectedItems}
         isPaused={isPaused}
         gameMode={gameMode}
         sessionType={sessionType}
