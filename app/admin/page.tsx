@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase'
 import { parseUnits, formatUnits } from 'viem'
 
 const VAULT_ADDRESS = process.env.NEXT_PUBLIC_TOURNAMENT_VAULT_ADDRESS as `0x${string}`
-const ADMIN_WALLET = '0x274785f92c8829c6F2D7E67e67c3d087f51B57be'
+const ADMIN_WALLET = '0x4D9775d6846a1C7AF5039D3332572DeC722b4a5a'
 
 const VAULT_ABI = [
   {
