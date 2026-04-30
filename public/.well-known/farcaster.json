@@ -1,14 +1,16 @@
 {
   "accountAssociation": {
-    "header": "...",
-    "payload": "...",
-    "signature": "..."
+    "header": "eyJmaWQiOjMzMjMzMzcsInR5cGUiOiJjdXN0b2R5Iiwia2V5IjoiMHhEYTA5NkNiMGU3MDI5YjQ1QTBiOTI1OEY4N0JlRkRDZjkxM0VlZTk1In0",
+    "payload": "eyJkb21haW4iOiJmYXJmbGFwcHkueHl6In0",
+    "signature": "WL/7Uvf9MhgOZ2TktOfXYJvvvtYKbpzHuqcjKRlPkfUkooXBXfsXEW7NwGnznSbsrA2gDPXnL/zLAJYbE/ZmXRw="
   },
   "frame": {
     "version": "1",
     "name": "FarFlappy",
     "iconUrl": "https://farflappy.xyz/icon.png",
     "homeUrl": "https://farflappy.xyz",
+    "imageUrl": "https://farflappy.xyz/splash.png",
+    "buttonTitle": "Play FarFlappy",
     "splashImageUrl": "https://farflappy.xyz/splash.png",
     "splashBackgroundColor": "#0f0a1e"
   }
