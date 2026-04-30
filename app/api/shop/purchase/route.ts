@@ -13,7 +13,7 @@ const publicClient = createPublicClient({
   transport: http(),
 })
 
-const DEV_WALLET = '0xc616863b7c14868b87699c8028e89cef2fcd3c4a'
+const DEV_WALLET = '0x4D9775d6846a1C7AF5039D3332572DeC722b4a5a'
 const USDC = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
 
 const ITEM_PRICES: Record<string, number> = {
