@@ -54,10 +54,17 @@ interface GameEngineProps {
 }
 
 export const MODE_SPEED: Record<GameMode, number> = {
-  easy:   1.0,
+  easy:   0.7,
   medium: 1.5,
-  expert: 2.2,
-  insane: 3.2,
+  expert: 2.8,
+  insane: 4.5,
+}
+
+export const MODE_GAP: Record<GameMode, number> = {
+  easy:   195,
+  medium: 165,
+  expert: 135,
+  insane: 105,
 }
 
 export const MODE_LABELS: Record<GameMode, string> = {
@@ -77,7 +84,6 @@ export const MODE_COLORS: Record<GameMode, string> = {
 const GRAVITY = 0.35
 const JUMP_FORCE = -7
 const PIPE_WIDTH = 52
-const PIPE_GAP_BASE = 165
 const PIPE_GAP_SLOW = 215
 const BIRD_X = 80
 const BIRD_SIZE = 28
@@ -266,7 +272,8 @@ export default function GameEngine({
     }
 
     function getCurrentGap() {
-      return hasEffect('slow') ? PIPE_GAP_SLOW : PIPE_GAP_BASE
+      if (hasEffect('slow')) return PIPE_GAP_SLOW
+      return MODE_GAP[gameModeRef.current]
     }
 
     function spawnItem(x: number, midY: number) {
