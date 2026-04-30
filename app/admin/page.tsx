@@ -87,6 +87,7 @@ const VAULT_ABI = [
 ] as const
 
 export default function AdminPage() {
+  const [mounted, setMounted] = useState(false)
   const { address, isConnected } = useAccount()
   const { writeContractAsync } = useWriteContract()
   const [status, setStatus] = useState('')
@@ -101,6 +102,11 @@ export default function AdminPage() {
   const [distributeId, setDistributeId] = useState('')
   const [distributeWinners, setDistributeWinners] = useState('')
   const [distributeAmounts, setDistributeAmounts] = useState('')
+
+  // Fix hydration issue
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   // Read contract state
   const { data: isPaused, refetch: refetchPaused } = useReadContract({
@@ -122,7 +128,8 @@ export default function AdminPage() {
     args: [BigInt(tournamentIdQuery || '1')],
   })
 
-  const isAdmin = address?.toLowerCase() === ADMIN_WALLET.toLowerCase()
+  // Normalisasi address untuk komparasi yang aman
+  const isAdmin = mounted && address?.toLowerCase().trim() === ADMIN_WALLET.toLowerCase().trim()
 
   const exec = async (label: string, fn: () => Promise<unknown>) => {
     setLoading(true)
@@ -143,13 +150,19 @@ export default function AdminPage() {
   const handleCreateTournament = async () => {
     if (!newTournamentName) return
 
-    // Generate numeric ID from timestamp
     const numId = Math.floor(Date.now() / 1000)
+    const getNextMonday = () => {
+      const d = new Date()
+      const day = d.getDay()
+      const diff = (8 - day) % 7 || 7
+      d.setDate(d.getDate() + diff)
+      d.setUTCHours(0, 0, 0, 0)
+      return d
+    }
 
-    // Save to Supabase first
     const startTime = newTournamentStart
       ? new Date(newTournamentStart).toISOString()
-      : new Date(getNextMonday()).toISOString()
+      : getNextMonday().toISOString()
 
     const endTime = new Date(new Date(startTime).getTime() + 24 * 60 * 60 * 1000).toISOString()
 
@@ -166,7 +179,6 @@ export default function AdminPage() {
 
     if (error) { setStatus('✗ Supabase error: ' + error.message); return }
 
-    // Create onchain
     await exec('Create Tournament', () =>
       writeContractAsync({
         address: VAULT_ADDRESS,
@@ -203,6 +215,9 @@ export default function AdminPage() {
     )
   }
 
+  // Jangan render apapun sebelum mounted untuk menghindari mismatch
+  if (!mounted) return null
+
   if (!isConnected) {
     return (
       <div className="min-h-screen bg-bg-primary flex items-center justify-center">
@@ -221,8 +236,10 @@ export default function AdminPage() {
         <div className="card p-8 text-center">
           <div className="text-red-400 pixel-font text-sm mb-2">ACCESS DENIED</div>
           <p className="text-text-muted text-xs">Not the admin wallet</p>
-          <p className="text-text-muted text-xs mt-1 font-mono">{address}</p>
-          <w3m-button />
+          <p className="text-text-muted text-xs mt-1 font-mono break-all">{address}</p>
+          <div className="mt-4">
+            <w3m-button />
+          </div>
         </div>
       </div>
     )
@@ -230,20 +247,17 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen bg-bg-primary p-4 space-y-4 max-w-2xl mx-auto">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div className="pixel-font text-farcaster-light text-sm">⚙️ ADMIN</div>
         <w3m-button />
       </div>
 
-      {/* Status */}
       {status && (
         <div className={`card p-3 text-xs font-mono ${status.startsWith('✓') ? 'border-green-400/50 text-green-400' : status.startsWith('✗') ? 'border-red-400/50 text-red-400' : 'text-text-muted'}`}>
           {status}
         </div>
       )}
 
-      {/* Contract Stats */}
       <div className="card p-4 space-y-2">
         <div className="pixel-font text-text-muted mb-2" style={{ fontSize: 8 }}>CONTRACT STATUS</div>
         <div className="flex justify-between text-xs">
@@ -279,12 +293,11 @@ export default function AdminPage() {
         </div>
       </div>
 
-      {/* Create Tournament */}
       <div className="card p-4 space-y-3">
         <div className="pixel-font text-text-muted" style={{ fontSize: 8 }}>CREATE TOURNAMENT</div>
         <input
           className="w-full bg-bg-secondary border border-farcaster/30 rounded p-2 text-xs text-text"
-          placeholder="Tournament name (e.g. Week 1 Human League)"
+          placeholder="Tournament name"
           value={newTournamentName}
           onChange={e => setNewTournamentName(e.target.value)}
         />
@@ -302,14 +315,12 @@ export default function AdminPage() {
           className="w-full bg-bg-secondary border border-farcaster/30 rounded p-2 text-xs text-text"
           value={newTournamentStart}
           onChange={e => setNewTournamentStart(e.target.value)}
-          placeholder="Start time (default: next Monday UTC)"
         />
         <button className="btn-primary w-full text-xs" onClick={handleCreateTournament} disabled={loading || !newTournamentName}>
           CREATE + ACTIVATE ONCHAIN
         </button>
       </div>
 
-      {/* Query Tournament */}
       <div className="card p-4 space-y-3">
         <div className="pixel-font text-text-muted" style={{ fontSize: 8 }}>QUERY TOURNAMENT</div>
         <div className="flex gap-2">
@@ -340,7 +351,6 @@ export default function AdminPage() {
         )}
       </div>
 
-      {/* Distribute Prizes */}
       <div className="card p-4 space-y-3">
         <div className="pixel-font text-text-muted" style={{ fontSize: 8 }}>DISTRIBUTE PRIZES</div>
         <input
@@ -351,23 +361,21 @@ export default function AdminPage() {
         />
         <textarea
           className="w-full bg-bg-secondary border border-farcaster/30 rounded p-2 text-xs text-text h-20"
-          placeholder={"Winner addresses (one per line)\n0x123...\n0x456..."}
+          placeholder={"Winner addresses (one per line)"}
           value={distributeWinners}
           onChange={e => setDistributeWinners(e.target.value)}
         />
         <textarea
           className="w-full bg-bg-secondary border border-farcaster/30 rounded p-2 text-xs text-text h-16"
-          placeholder={"Amounts in USDC (one per line)\n10.00\n5.00"}
+          placeholder={"Amounts in USDC (one per line)"}
           value={distributeAmounts}
           onChange={e => setDistributeAmounts(e.target.value)}
         />
-        <div className="text-text-muted text-xs">Total must be ≤ 80% of prize pool</div>
         <button className="btn-primary w-full text-xs" onClick={handleDistribute} disabled={loading || !distributeId}>
           DISTRIBUTE 🏆
         </button>
       </div>
 
-      {/* Withdraw Dev */}
       <div className="card p-4 space-y-3">
         <div className="pixel-font text-text-muted" style={{ fontSize: 8 }}>WITHDRAW DEV FEES</div>
         <div className="text-xs text-text-muted">
@@ -376,7 +384,7 @@ export default function AdminPage() {
         <div className="flex gap-2">
           <input
             className="flex-1 bg-bg-secondary border border-farcaster/30 rounded p-2 text-xs text-text"
-            placeholder="Amount USDC (e.g. 10.00)"
+            placeholder="Amount USDC"
             value={withdrawAmount}
             onChange={e => setWithdrawAmount(e.target.value)}
           />
@@ -386,10 +394,8 @@ export default function AdminPage() {
         </div>
       </div>
 
-      {/* Emergency */}
       <div className="card p-4 border-red-400/30 space-y-3">
         <div className="pixel-font text-red-400" style={{ fontSize: 8 }}>⚠️ EMERGENCY</div>
-        <div className="text-xs text-text-muted">Initiates 72h timelock before funds can be withdrawn</div>
         <div className="flex gap-2">
           <input
             className="flex-1 bg-bg-secondary border border-red-400/30 rounded p-2 text-xs text-text"
@@ -401,8 +407,7 @@ export default function AdminPage() {
             style={{ background: '#ef4444' }}
             onClick={() => {
               const id = (document.getElementById('emergency-id') as HTMLInputElement).value
-              if (!id) return
-              if (!confirm('Initiate 72h emergency timelock?')) return
+              if (!id || !confirm('Initiate 72h emergency timelock?')) return
               exec('Emergency Initiate', () =>
                 writeContractAsync({
                   address: VAULT_ADDRESS,
@@ -420,13 +425,4 @@ export default function AdminPage() {
       </div>
     </div>
   )
-}
-
-function getNextMonday() {
-  const d = new Date()
-  const day = d.getDay()
-  const diff = (8 - day) % 7 || 7
-  d.setDate(d.getDate() + diff)
-  d.setUTCHours(0, 0, 0, 0)
-  return d
 }
