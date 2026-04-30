@@ -271,14 +271,13 @@ export default function LandingPage() {
       {/* Footer */}
       <footer style={{ padding: '28px 24px', textAlign: 'center', borderTop: '1px solid rgba(124,58,237,0.2)' }}>
         <div style={{ fontFamily: '"Press Start 2P", monospace', fontSize: 7, color: '#4c1d95', marginBottom: 16 }}>
-          FARFLAPPY © 2025 · BUILT ON BASE · POWERED BY FARCASTER
+          FARFLAPPY © 2026 · BUILT ON BASE · POWERED BY FARCASTER
         </div>
         <div style={{ display: 'flex', gap: 24, justifyContent: 'center', flexWrap: 'wrap' }}>
           {[
-            { label: 'WARPCAST', href: 'https://warpcast.com' },
-            { label: 'X / TWITTER', href: 'https://x.com/flappyxyz' },
+            { label: 'FARCASTER', href: 'https://warpcast.com/farflappy' },
+            { label: 'X', href: 'https://x.com/flappyxyz' },
             { label: 'BASESCAN', href: 'https://basescan.org' },
-            { label: 'GITHUB', href: 'https://github.com/nothing010101/farflappy' },
           ].map(({ label, href }) => (
             <a key={label} href={href} target="_blank" rel="noopener noreferrer"
                style={{ fontFamily: '"Press Start 2P", monospace', fontSize: 7, color: '#4c1d95', textDecoration: 'none' }}
