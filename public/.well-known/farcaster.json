@@ -9,8 +9,8 @@
     "name": "FarFlappy",
     "iconUrl": "https://farflappy.xyz/icon.jpg",
     "homeUrl": "https://farflappy.xyz",
-    "imageUrl": "https://farflappy.xyz/splash.png",
-    "buttonTitle": "Play FarFlappy",
+    "imageUrl": "https://farflappy.xyz/preview.png",
+    "buttonTitle": "🕹️ Play FarFlappy",
     "splashImageUrl": "https://farflappy.xyz/splash.png",
     "splashBackgroundColor": "#0f0a1e"
   }
