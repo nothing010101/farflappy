@@ -180,14 +180,6 @@ Content-Type: application/json
           style={{ flex: 1, background: 'rgba(124,58,237,0.15)', border: '1px solid rgba(124,58,237,0.4)', padding: '12px 8px', borderRadius: 4, cursor: 'pointer', fontFamily: '"Press Start 2P", monospace', fontSize: 7, color: '#a78bfa' }}
         >
           📡 LIVE API INFO
-        </button>
-        <button
-          onClick={() => window.open('https://github.com/nothing010101/farflappy', '_blank')}
-          style={{ flex: 1, background: 'rgba(6,182,212,0.1)', border: '1px solid rgba(6,182,212,0.3)', padding: '12px 8px', borderRadius: 4, cursor: 'pointer', fontFamily: '"Press Start 2P", monospace', fontSize: 7, color: '#06b6d4' }}
-        >
-          📄 GITHUB
-        </button>
-      </div>
 
       <div style={{ paddingBottom: 8 }} />
     </div>
