@@ -7,11 +7,13 @@
   "frame": {
     "version": "1",
     "name": "FarFlappy",
+    "subtitle": "Tap. Dodge. Compete. Win on Base.",
     "iconUrl": "https://farflappy.xyz/icon.jpg",
     "homeUrl": "https://farflappy.xyz",
     "imageUrl": "https://farflappy.xyz/preview.png",
     "buttonTitle": "🕹️ Play FarFlappy",
     "splashImageUrl": "https://farflappy.xyz/splash.png",
     "splashBackgroundColor": "#0f0a1e"
-  }
+  },
+  "agentInstructions": "FarFlappy is a Farcaster mini app — a skill-based flappy bird arcade game with on-chain tournaments on Base mainnet. Players tap/click to make the bird fly and dodge purple pipes. The game has 4 difficulty modes: Easy (slow, wide gaps), Medium (moderate), Expert (fast, narrow gaps), Insane (very fast, very narrow). Players earn $FLAPPY points each game and compete in weekly tournaments with USDC prize pools funded by ETH entry fees. To start: open the app at https://farflappy.xyz, connect a wallet (supports Farcaster/Warpcast wallet, MetaMask, Coinbase Wallet), choose a difficulty mode, then tap the screen or press spacebar to play. Tournament entry costs a small ETH fee on Base. Leaderboard and scores are stored on-chain."
 }
