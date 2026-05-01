@@ -12,8 +12,9 @@ const Leaderboard = dynamic(() => import('@/components/Leaderboard'), { ssr: fal
 const Profile = dynamic(() => import('@/components/Profile'), { ssr: false })
 const Shop = dynamic(() => import('@/components/Shop'), { ssr: false })
 const Tournament = dynamic(() => import('@/components/Tournament'), { ssr: false })
+const AgentDocs = dynamic(() => import('@/components/AgentDocs'), { ssr: false })
 
-type Tab = 'home' | 'game' | 'leaderboard' | 'tournament' | 'shop' | 'profile'
+type Tab = 'home' | 'game' | 'leaderboard' | 'tournament' | 'shop' | 'profile' | 'agent'
 
 export default function Home() {
   const [tab, setTab] = useState<Tab>('home')
@@ -53,13 +54,14 @@ export default function Home() {
     init()
   }, [address, fetchOrCreatePlayer])
 
-  const tabs: { key: Tab; label: string; icon: string }[] = [
-    { key: 'home', label: 'HOME', icon: '🏠' },
-    { key: 'game', label: 'PLAY', icon: '🎮' },
-    { key: 'leaderboard', label: 'RANKS', icon: '🏆' },
-    { key: 'tournament', label: 'EVENT', icon: '⚔️' },
-    { key: 'shop', label: 'SHOP', icon: '🛒' },
-    { key: 'profile', label: 'ME', icon: '👤' },
+  const tabs: { key: Tab; icon: string; label: string }[] = [
+    { key: 'home',        icon: '🏠', label: 'HOME' },
+    { key: 'game',        icon: '🎮', label: 'PLAY' },
+    { key: 'leaderboard', icon: '🏆', label: 'RANKS' },
+    { key: 'tournament',  icon: '⚔️',  label: 'EVENT' },
+    { key: 'shop',        icon: '🛒', label: 'SHOP' },
+    { key: 'agent',       icon: '🤖', label: 'AGENT' },
+    { key: 'profile',     icon: '👤', label: 'ME' },
   ]
 
   return (
@@ -103,23 +105,24 @@ export default function Home() {
         {tab === 'leaderboard' && <Leaderboard />}
         {tab === 'tournament' && <Tournament />}
         {tab === 'shop' && <Shop />}
+        {tab === 'agent' && <AgentDocs />}
         {tab === 'profile' && <Profile />}
       </div>
 
       {/* Bottom nav */}
-      <div className="border-t border-farcaster/20 flex">
-        {tabs.map(({ key, label, icon }) => (
+      <div className="border-t border-farcaster/20 flex overflow-x-auto">
+        {tabs.map(({ key, icon, label }) => (
           <button
             key={key}
             onClick={() => setTab(key)}
-            className={`flex-1 flex flex-col items-center py-3 gap-1 transition-colors ${
+            className={`flex-1 flex flex-col items-center py-2 gap-0.5 transition-colors min-w-0 ${
               tab === key
                 ? 'text-farcaster-light bg-farcaster/10'
                 : 'text-text-muted hover:text-text'
             }`}
           >
-            <span className="text-base">{icon}</span>
-            <span className="pixel-font" style={{ fontSize: 7 }}>{label}</span>
+            <span style={{ fontSize: 14 }}>{icon}</span>
+            <span style={{ fontFamily: '"Press Start 2P", monospace', fontSize: 6, whiteSpace: 'nowrap' }}>{label}</span>
           </button>
         ))}
       </div>
