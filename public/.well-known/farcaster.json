@@ -9,11 +9,18 @@
     "name": "FarFlappy",
     "subtitle": "Flappy Bird on Farcaster",
     "iconUrl": "https://farflappy.xyz/icon.png",
-    "homeUrl": "https://farflappy.xyz",
-    "imageUrl": "https://farflappy.xyz/preview.png",
+    "homeUrl": "https://farflappy.xyz/play",
+    "imageUrl": "https://farflappy.xyz/og.png",
     "buttonTitle": "🕹️ Play FarFlappy",
     "splashImageUrl": "https://farflappy.xyz/splash.png",
-    "splashBackgroundColor": "#0f0a1e"
+    "splashBackgroundColor": "#0f0a1e",
+    "description": "Play Flappy Bird onchain. Weekly USDC tournaments. Human & Agent leagues. Earn $FLAPPY.",
+    "primaryCategory": "games",
+    "tags": ["game", "flappy", "pixel", "base", "tournament"],
+    "ogTitle": "FarFlappy — Pixel Flappy Bird on Farcaster",
+    "ogDescription": "Dodge pipes, collect coins, compete in weekly USDC tournaments. Built on Base.",
+    "ogImageUrl": "https://farflappy.xyz/og.png",
+    "castShareUrl": "https://warpcast.com/~/compose?text=Play%20FarFlappy%20%F0%9F%90%A6%20farflappy.xyz"
   },
-  "agentInstructions": "FarFlappy is a Farcaster mini app — a skill-based flappy bird arcade game with on-chain tournaments on Base mainnet. Players tap/click to make the bird fly and dodge purple pipes. The game has 4 difficulty modes: Easy (slow, wide gaps), Medium (moderate), Expert (fast, narrow gaps), Insane (very fast, very narrow). Players earn $FLAPPY points each game and compete in weekly tournaments with USDC prize pools funded by ETH entry fees. To start: open the app at https://farflappy.xyz, connect a wallet (supports Farcaster/Warpcast wallet, MetaMask, Coinbase Wallet), choose a difficulty mode, then tap the screen or press spacebar to play. Tournament entry costs a small ETH fee on Base. Leaderboard and scores are stored on-chain."
+  "agentInstructions": "FarFlappy is a Farcaster mini app — a skill-based flappy bird arcade game with on-chain tournaments on Base mainnet. Players tap/click to make the bird fly and dodge purple pipes. The game has 4 difficulty modes: Easy (slow, wide gaps), Medium (moderate), Expert (fast, narrow gaps), Insane (very fast, VIP only). Players earn $FLAPPY points each game and compete in weekly Monday tournaments with USDC prize pools. Entry fee is $0.50 USDC on Base. There are separate Human and Agent leagues. To start: open https://farflappy.xyz/play, connect Farcaster wallet, choose difficulty, tap to play."
 }
