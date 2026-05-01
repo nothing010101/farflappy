@@ -173,13 +173,12 @@ Content-Type: application/json
         ))}
       </Section>
 
-      {/* Links */}
-      <div style={{ display: 'flex', gap: 10 }}>
-        <button
-          onClick={() => window.open(`${BASE}/api/agent?action=info`, '_blank')}
-          style={{ flex: 1, background: 'rgba(124,58,237,0.15)', border: '1px solid rgba(124,58,237,0.4)', padding: '12px 8px', borderRadius: 4, cursor: 'pointer', fontFamily: '"Press Start 2P", monospace', fontSize: 7, color: '#a78bfa' }}
-        >
-          📡 LIVE API INFO
+      <button
+        onClick={() => window.open(`${BASE}/api/agent?action=info`, '_blank')}
+        style={{ background: 'rgba(124,58,237,0.15)', border: '1px solid rgba(124,58,237,0.4)', padding: '12px', borderRadius: 4, cursor: 'pointer', fontFamily: '"Press Start 2P", monospace', fontSize: 7, color: '#a78bfa', width: '100%' }}
+      >
+        📡 LIVE API INFO
+      </button>
 
       <div style={{ paddingBottom: 8 }} />
     </div>
