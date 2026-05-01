@@ -8,7 +8,7 @@
     "version": "1",
     "name": "FarFlappy",
     "subtitle": "Flappy Bird on Farcaster",
-    "iconUrl": "https://farflappy.xyz/icon.jpg",
+    "iconUrl": "https://farflappy.xyz/icon.png",
     "homeUrl": "https://farflappy.xyz",
     "imageUrl": "https://farflappy.xyz/preview.png",
     "buttonTitle": "🕹️ Play FarFlappy",
