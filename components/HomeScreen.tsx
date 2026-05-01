@@ -262,7 +262,7 @@ export default function HomeScreen({ onPlay, onTab }: HomeScreenProps) {
 
       {/* Agent skill.md */}
       <button
-        onClick={() => onTab('profile')}
+        onClick={() => onTab('agent')}
         style={{
           background: 'rgba(6,182,212,0.1)',
           border: '1px solid rgba(6,182,212,0.3)',
