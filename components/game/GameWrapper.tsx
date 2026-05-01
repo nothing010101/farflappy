@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react'
 import dynamic from 'next/dynamic'
+import { sdk } from '@farcaster/miniapp-sdk'
 import { usePlayerStore } from '@/store/playerStore'
 import { supabase } from '@/lib/supabase'
 import { useChiptune } from '@/hooks/useChiptune'
@@ -27,6 +28,7 @@ export default function GameWrapper({ sessionType = 'casual' }: { sessionType?: 
   const [isPaused] = useState(false)
   const [muted, setMuted] = useState(false)
   const [selectedItems, setSelectedItems] = useState<string[]>([])
+  const [sharing, setSharing] = useState(false)
 
   const startTime = useRef<number>(0)
   const { player } = usePlayerStore()
@@ -71,6 +73,22 @@ export default function GameWrapper({ sessionType = 'casual' }: { sessionType?: 
       flappy_points: player.flappy_points + state.score,
     }).eq('id', player.id)
   }, [player, sfxDeath, stopMusic, sessionType, gameMode])
+
+  const handleShare = useCallback(async () => {
+    if (!finalState) return
+    setSharing(true)
+    try {
+      const modeLabel = MODE_LABELS[gameMode]
+      const castText = `🐦 I scored ${finalState.score.toLocaleString()} in FarFlappy on ${modeLabel} mode!\n🪙 Coins: ${finalState.coins} · 🏗️ Pipes: ${finalState.pipes}\n\nCan you beat me? Play now 👇\nhttps://farflappy.xyz`
+      await sdk.actions.composeCast({ text: castText })
+    } catch {
+      // fallback: open warpcast compose in browser
+      const text = encodeURIComponent(`🐦 I scored ${finalState?.score.toLocaleString()} in FarFlappy! Play at farflappy.xyz`)
+      window.open(`https://warpcast.com/~/compose?text=${text}`, '_blank')
+    } finally {
+      setSharing(false)
+    }
+  }, [finalState, gameMode])
 
   const startGame = () => {
     setPhase('playing')
@@ -300,6 +318,21 @@ export default function GameWrapper({ sessionType = 'casual' }: { sessionType?: 
             <span className="pixel-font text-green-400 text-sm">+{finalState.score}</span>
           </div>
         </div>
+
+        <button
+          onClick={handleShare}
+          disabled={sharing}
+          className="w-full max-w-xs py-3 pixel-font text-xs transition-all"
+          style={{
+            background: sharing ? 'rgba(124,58,237,0.3)' : 'rgba(124,58,237,0.9)',
+            border: '2px solid #7c3aed',
+            borderRadius: 4,
+            color: sharing ? '#a78bfa' : '#fff',
+            cursor: sharing ? 'not-allowed' : 'pointer',
+          }}
+        >
+          {sharing ? 'SHARING...' : '🪄 SHARE SCORE ON FARCASTER'}
+        </button>
 
         <div className="flex gap-3 w-full max-w-xs">
           <button className="btn-primary flex-1" onClick={() => setPhase('mode_select')}>RETRY</button>
