@@ -6,18 +6,19 @@ import { supabase, Tournament } from '@/lib/supabase'
 import { usePlayerStore } from '@/store/playerStore'
 import { useTournament } from '@/hooks/useTournament'
 
-// Wrapper per tournament card yang pakai hook onchain
 function TournamentCard({ t }: { t: Tournament }) {
   const { player } = usePlayerStore()
+  const { address } = useAccount()
   const [entering, setEntering] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
 
+  const isFree = t.entry_fee_usdc === 0
   const tournamentIdNum = t.contract_address
     ? parseInt(t.id.slice(-8), 16) || 1
     : 1
 
-  const { enterTournament, prizePool, participantCount, alreadyEntered, isActive } =
+  const { enterTournament, prizePool, participantCount, alreadyEntered } =
     useTournament(tournamentIdNum)
 
   const formatDate = (iso: string) =>
@@ -31,7 +32,43 @@ function TournamentCard({ t }: { t: Tournament }) {
     if (diff <= 0) return 'ENDED'
     const h = Math.floor(diff / 3600000)
     const m = Math.floor((diff % 3600000) / 60000)
-    return `${h}h ${m}m`
+    return `${h}h ${m}m left`
+  }
+
+  // Check if already entered via Supabase
+  const [alreadyEnteredDB, setAlreadyEnteredDB] = useState(false)
+  useEffect(() => {
+    if (!player) return
+    supabase
+      .from('tournament_entries')
+      .select('id')
+      .eq('tournament_id', t.id)
+      .eq('player_id', player.id)
+      .single()
+      .then(({ data }) => { if (data) setAlreadyEnteredDB(true) })
+  }, [player, t.id])
+
+  const handleFreeEntry = async () => {
+    if (!player) return
+    setError('')
+    setEntering(true)
+    try {
+      const { error: err } = await supabase.from('tournament_entries').upsert({
+        tournament_id: t.id,
+        player_id: player.id,
+        entry_type: 'free',
+        qualified_free: true,
+        best_score: 0,
+        attempt_count: 0,
+      }, { onConflict: 'tournament_id,player_id' })
+      if (err) throw err
+      setSuccess(true)
+      setAlreadyEnteredDB(true)
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Failed to enter')
+    } finally {
+      setEntering(false)
+    }
   }
 
   const handlePaidEntry = async () => {
@@ -39,8 +76,6 @@ function TournamentCard({ t }: { t: Tournament }) {
     setEntering(true)
     try {
       await enterTournament()
-
-      // Record in Supabase
       if (player) {
         await supabase.from('tournament_entries').upsert({
           tournament_id: t.id,
@@ -50,11 +85,11 @@ function TournamentCard({ t }: { t: Tournament }) {
           attempt_count: 0,
         }, { onConflict: 'tournament_id,player_id' })
       }
-
       setSuccess(true)
+      setAlreadyEnteredDB(true)
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Transaction failed'
-      if (msg.includes('User rejected')) {
+      if (msg.includes('User rejected') || msg.includes('denied')) {
         setError('Transaction cancelled')
       } else if (msg.includes('insufficient')) {
         setError('Insufficient USDC balance')
@@ -66,120 +101,149 @@ function TournamentCard({ t }: { t: Tournament }) {
     }
   }
 
-  const handleFreeEntry = async () => {
-    if (!player) return
-    setError('')
-    setEntering(true)
-    try {
-      const { error } = await supabase.from('tournament_entries').upsert({
-        tournament_id: t.id,
-        player_id: player.id,
-        entry_type: 'free',
-        qualified_free: true,
-        best_score: 0,
-        attempt_count: 0,
-      }, { onConflict: 'tournament_id,player_id' })
-
-      if (error) throw error
-      setSuccess(true)
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Failed to enter')
-    } finally {
-      setEntering(false)
-    }
-  }
-
+  const isEntered = alreadyEnteredDB || success
   const livePrizePool = t.contract_address ? prizePool : t.prize_pool_usdc
   const liveParticipants = t.contract_address ? participantCount : t.participant_count
 
   return (
-    <div className={`card p-4 ${t.status === 'active' ? 'border-green-400/50' : ''}`}>
-      <div className="flex items-start justify-between mb-3">
+    <div style={{
+      background: '#111028',
+      border: `1px solid ${t.status === 'active' ? 'rgba(16,185,129,0.5)' : 'rgba(124,58,237,0.3)'}`,
+      borderRadius: 4,
+      padding: 16,
+    }}>
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
         <div>
-          <div className="pixel-font text-text text-xs">{t.name}</div>
-          <div className="text-text-muted text-xs mt-1">
+          <div style={{ fontFamily: '"Press Start 2P", monospace', fontSize: 9, color: '#e2d9f3' }}>
+            {t.name}
+          </div>
+          <div style={{ fontSize: 10, color: '#7c6fa0', marginTop: 4, fontFamily: '"IBM Plex Mono", monospace' }}>
             {t.player_type === 'human' ? '👤 Human League' :
               t.player_type === 'agent' ? '🤖 Agent League' : '⚔️ Open'}
           </div>
         </div>
-        <div className={`text-xs pixel-font ${t.status === 'active' ? 'text-green-400' : 'text-yellow-400'}`}>
-          {t.status === 'active' ? '🔴 LIVE' : 'SOON'}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+          <span style={{
+            fontFamily: '"Press Start 2P", monospace', fontSize: 7,
+            color: t.status === 'active' ? '#10b981' : '#f59e0b'
+          }}>
+            {t.status === 'active' ? '🔴 LIVE' : 'SOON'}
+          </span>
+          {isFree && (
+            <span style={{
+              fontFamily: '"Press Start 2P", monospace', fontSize: 7,
+              color: '#f5d020', background: 'rgba(245,208,32,0.15)',
+              padding: '2px 6px', borderRadius: 2,
+            }}>
+              FREE
+            </span>
+          )}
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 text-xs mb-3">
-        <div>
-          <div className="text-text-muted">Starts</div>
-          <div className="text-text">{formatDate(t.start_time)}</div>
-        </div>
-        <div>
-          <div className="text-text-muted">
-            {t.status === 'active' ? 'Time left' : 'Duration'}
+      {/* Stats grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}>
+        {[
+          { label: 'Ends', value: t.status === 'active' ? getTimeLeft(t.end_time) : formatDate(t.start_time) },
+          { label: 'Players', value: String(liveParticipants) },
+          { label: 'Prize Pool', value: livePrizePool > 0 ? `$${livePrizePool.toFixed(2)}` : 'Sponsored 🎁', color: '#10b981' },
+          { label: 'Max Attempts', value: '5' },
+        ].map(({ label, value, color }) => (
+          <div key={label} style={{ background: 'rgba(10,6,20,0.6)', padding: '8px 10px', borderRadius: 4 }}>
+            <div style={{ fontSize: 9, color: '#7c6fa0', fontFamily: '"IBM Plex Mono", monospace' }}>{label}</div>
+            <div style={{ fontFamily: '"Press Start 2P", monospace', fontSize: 9, color: color || '#e2d9f3', marginTop: 4 }}>
+              {value}
+            </div>
           </div>
-          <div className="text-text">
-            {t.status === 'active' ? getTimeLeft(t.end_time) : '24h'}
-          </div>
-        </div>
-        <div>
-          <div className="text-text-muted">Prize pool</div>
-          <div className="text-green-400 pixel-font">${livePrizePool.toFixed(2)} USDC</div>
-        </div>
-        <div>
-          <div className="text-text-muted">Players</div>
-          <div className="text-text">{liveParticipants}</div>
-        </div>
+        ))}
       </div>
 
       {/* Attempts info */}
-      <div className="text-xs text-text-muted mb-3 bg-black/20 rounded p-2">
-        Max <span className="text-pixel">5 attempts</span> — best score counts
+      <div style={{
+        fontSize: 10, color: '#7c6fa0', marginBottom: 12,
+        fontFamily: '"IBM Plex Mono", monospace',
+        background: 'rgba(124,58,237,0.08)', padding: '8px 10px', borderRadius: 4,
+      }}>
+        Best of 5 attempts counts · Speed increases with score
       </div>
 
-      {/* Error / Success */}
+      {/* Error */}
       {error && (
-        <div className="text-red-400 text-xs mb-2 bg-red-400/10 rounded p-2">{error}</div>
-      )}
-      {success && (
-        <div className="text-green-400 text-xs mb-2 bg-green-400/10 rounded p-2">
-          ✓ Entered! Go play and submit your score.
+        <div style={{ fontSize: 10, color: '#ef4444', marginBottom: 8, fontFamily: '"IBM Plex Mono", monospace' }}>
+          ✗ {error}
         </div>
       )}
 
       {/* Buttons */}
-      {alreadyEntered || success ? (
-        <div className="text-center pixel-font text-green-400 py-2" style={{ fontSize: 8 }}>
-          ✓ ALREADY ENTERED — GO PLAY!
+      {isEntered ? (
+        <div style={{
+          textAlign: 'center', padding: '14px',
+          fontFamily: '"Press Start 2P", monospace', fontSize: 9, color: '#10b981',
+          border: '1px solid rgba(16,185,129,0.3)', borderRadius: 4,
+        }}>
+          ✓ ENTERED — GO PLAY!
         </div>
+      ) : !address ? (
+        <div style={{
+          textAlign: 'center', padding: '12px', fontSize: 10,
+          color: '#7c6fa0', fontFamily: '"IBM Plex Mono", monospace',
+          border: '1px solid rgba(124,58,237,0.2)', borderRadius: 4,
+        }}>
+          Connect wallet to enter
+        </div>
+      ) : isFree ? (
+        // FREE TOURNAMENT — no requirements, anyone can enter
+        <button
+          onClick={handleFreeEntry}
+          disabled={entering}
+          style={{
+            width: '100%', background: entering ? '#1a1035' : '#f5d020',
+            border: 'none', padding: '14px',
+            fontFamily: '"Press Start 2P", monospace', fontSize: 10,
+            color: entering ? '#7c6fa0' : '#0f0a1e',
+            cursor: entering ? 'not-allowed' : 'pointer', borderRadius: 4,
+          }}
+        >
+          {entering ? 'ENTERING...' : '🎉 JOIN FREE'}
+        </button>
       ) : (
-        <div className="flex gap-2">
-          {/* Free entry — human only */}
-          {player?.player_type === 'human' && t.player_type !== 'agent' && (
+        // PAID TOURNAMENT
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {/* Free entry if eligible */}
+          {player?.player_type === 'human' && player.active_days >= 5 && (
             <button
-              className="flex-1 card text-xs pixel-font py-2 text-green-400 hover:bg-green-400/10 transition-colors cursor-pointer disabled:opacity-50"
               onClick={handleFreeEntry}
               disabled={entering}
-              style={{ fontSize: 8 }}
+              style={{
+                width: '100%', background: 'transparent',
+                border: '1px solid rgba(16,185,129,0.5)', padding: '12px',
+                fontFamily: '"Press Start 2P", monospace', fontSize: 9,
+                color: '#10b981', cursor: entering ? 'not-allowed' : 'pointer', borderRadius: 4,
+              }}
             >
-              {entering ? '...' : 'FREE ENTER'}
+              FREE (5+ days active)
             </button>
           )}
-
           {/* Paid entry */}
           <button
-            className="flex-1 btn-primary text-xs py-2 disabled:opacity-50"
             onClick={handlePaidEntry}
             disabled={entering || !t.contract_address}
-            style={{ fontSize: 9 }}
+            style={{
+              width: '100%', background: entering ? '#1a1035' : '#7c3aed',
+              border: 'none', padding: '14px',
+              fontFamily: '"Press Start 2P", monospace', fontSize: 10,
+              color: entering ? '#7c6fa0' : 'white',
+              cursor: entering || !t.contract_address ? 'not-allowed' : 'pointer', borderRadius: 4,
+            }}
           >
-            {entering ? 'CONFIRM TX...' : 'PAY $0.50 USDC'}
+            {entering ? 'CONFIRM TX...' : `PAY $${t.entry_fee_usdc} USDC`}
           </button>
-        </div>
-      )}
-
-      {/* No contract yet */}
-      {!t.contract_address && (
-        <div className="text-text-muted text-center mt-2" style={{ fontSize: 7 }}>
-          Tournament not yet activated onchain
+          {!t.contract_address && (
+            <div style={{ fontSize: 9, color: '#4c1d95', textAlign: 'center', fontFamily: '"IBM Plex Mono", monospace' }}>
+              Contract not yet activated
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -190,7 +254,6 @@ export default function TournamentPage() {
   const [tournaments, setTournaments] = useState<Tournament[]>([])
   const [loading, setLoading] = useState(true)
   const { player } = usePlayerStore()
-  const { address } = useAccount()
 
   useEffect(() => {
     const fetch = async () => {
@@ -199,7 +262,7 @@ export default function TournamentPage() {
         .select('*')
         .in('status', ['upcoming', 'active'])
         .order('start_time', { ascending: true })
-        .limit(5)
+        .limit(10)
       setTournaments(data || [])
       setLoading(false)
     }
@@ -207,64 +270,80 @@ export default function TournamentPage() {
   }, [])
 
   return (
-    <div className="h-full overflow-y-auto p-4 space-y-4">
-      <div className="pixel-font text-farcaster-light text-center mb-2" style={{ fontSize: 9 }}>
+    <div style={{ height: '100%', overflowY: 'auto', padding: 16 }}>
+      {/* Header */}
+      <div style={{ fontFamily: '"Press Start 2P", monospace', fontSize: 10, color: '#a78bfa', textAlign: 'center', marginBottom: 6 }}>
         ⚔️ TOURNAMENTS
       </div>
 
-      {/* Rules */}
-      <div className="card p-4 space-y-1">
-        <div className="pixel-font text-text-muted mb-2" style={{ fontSize: 7 }}>HOW IT WORKS</div>
-        <div className="text-xs text-text-muted leading-relaxed space-y-1">
-          <div>• Every <span className="text-farcaster-light">Monday UTC</span>, 24h tournament</div>
-          <div>• Max <span className="text-pixel">5 attempts</span> — best score counts</div>
-          <div>• <span className="text-green-400">Free entry</span>: 5 active days + 5000 avg score</div>
-          <div>• <span className="text-yellow-400">Paid entry</span>: $0.50 USDC (anyone)</div>
-          <div>• Agents: paid entry only ($0.50 USDC)</div>
-          <div>• Prize: <span className="text-green-400">80%</span> pool → winners, 20% dev</div>
+      {/* Beta banner */}
+      <div style={{
+        background: 'rgba(245,208,32,0.1)',
+        border: '1px solid rgba(245,208,32,0.4)',
+        borderRadius: 4, padding: '12px 14px', marginBottom: 14,
+        textAlign: 'center',
+      }}>
+        <div style={{ fontFamily: '"Press Start 2P", monospace', fontSize: 8, color: '#f5d020', marginBottom: 6 }}>
+          🎉 BETA LAUNCH WEEK
+        </div>
+        <div style={{ fontSize: 10, color: '#7c6fa0', fontFamily: '"IBM Plex Mono", monospace', lineHeight: 1.6 }}>
+          First tournament is FREE for everyone!<br />
+          Prize pool sponsored by the dev.
         </div>
       </div>
 
-      {/* Wallet check */}
-      {!address && (
-        <div className="card p-4 text-center">
-          <div className="text-text-muted text-xs">Connect wallet to enter tournaments</div>
+      {/* Rules */}
+      <div style={{
+        background: 'rgba(10,6,20,0.8)', border: '1px solid rgba(124,58,237,0.2)',
+        borderRadius: 4, padding: '12px 14px', marginBottom: 14,
+      }}>
+        <div style={{ fontFamily: '"Press Start 2P", monospace', fontSize: 8, color: '#7c6fa0', marginBottom: 8 }}>
+          HOW IT WORKS
         </div>
-      )}
+        {[
+          '⚔️  Every Monday UTC — 24h tournament',
+          '🎯  Max 5 attempts — best score counts',
+          '💰  80% prize pool → winners',
+          '⚡  Speed increases as score grows',
+        ].map(line => (
+          <div key={line} style={{ fontSize: 10, color: '#7c6fa0', fontFamily: '"IBM Plex Mono", monospace', marginBottom: 6 }}>
+            {line}
+          </div>
+        ))}
+      </div>
 
-      {/* Eligibility */}
+      {/* Player status */}
       {player && (
-        <div className="card p-3">
-          <div className="pixel-font text-text-muted mb-2" style={{ fontSize: 7 }}>YOUR STATUS</div>
-          <div className="flex justify-between text-xs">
-            <span className="text-text-muted">Active days</span>
-            <span className={player.active_days >= 5 ? 'text-green-400' : 'text-red-400'}>
-              {player.active_days}/5 {player.active_days >= 5 ? '✓' : '✗'}
-            </span>
-          </div>
-          <div className="flex justify-between text-xs mt-1">
-            <span className="text-text-muted">Type</span>
-            <span className={player.player_type === 'human' ? 'text-green-400' : 'text-cyan-400'}>
-              {player.player_type === 'human' ? '👤 Can enter free' : '🤖 Paid only'}
-            </span>
-          </div>
+        <div style={{
+          background: 'rgba(124,58,237,0.08)', border: '1px solid rgba(124,58,237,0.2)',
+          borderRadius: 4, padding: '10px 14px', marginBottom: 14,
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        }}>
+          <span style={{ fontSize: 10, color: '#7c6fa0', fontFamily: '"IBM Plex Mono", monospace' }}>
+            {player.username}
+          </span>
+          <span style={{ fontSize: 10, color: player.player_type === 'human' ? '#10b981' : '#06b6d4', fontFamily: '"IBM Plex Mono", monospace' }}>
+            {player.player_type === 'human' ? '👤 Human' : '🤖 Agent'}
+          </span>
         </div>
       )}
 
       {/* Tournament list */}
       {loading ? (
-        <div className="text-center text-text-muted pixel-font mt-8" style={{ fontSize: 8 }}>
+        <div style={{ textAlign: 'center', color: '#7c6fa0', fontFamily: '"Press Start 2P", monospace', fontSize: 8, marginTop: 40 }}>
           LOADING...
         </div>
       ) : tournaments.length === 0 ? (
-        <div className="card p-6 text-center">
-          <div className="text-3xl mb-3">⏳</div>
-          <div className="pixel-font text-text-muted" style={{ fontSize: 8 }}>
+        <div style={{ textAlign: 'center', padding: 40 }}>
+          <div style={{ fontSize: 32, marginBottom: 12 }}>⏳</div>
+          <div style={{ fontFamily: '"Press Start 2P", monospace', fontSize: 8, color: '#7c6fa0' }}>
             NEXT TOURNAMENT MONDAY UTC
           </div>
         </div>
       ) : (
-        tournaments.map(t => <TournamentCard key={t.id} t={t} />)
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {tournaments.map(t => <TournamentCard key={t.id} t={t} />)}
+        </div>
       )}
     </div>
   )
