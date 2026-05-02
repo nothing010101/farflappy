@@ -7,16 +7,16 @@ import { usePlayerStore } from '@/store/playerStore'
 import { useTournament } from '@/hooks/useTournament'
 
 function TournamentCard({ t }: { t: Tournament }) {
-  const { player } = usePlayerStore()
+  const { player, isLoading: playerLoading } = usePlayerStore()
   const { address } = useAccount()
   const [entering, setEntering] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
 
   const isFree = t.entry_fee_usdc === 0
-  const tournamentIdNum = t.contract_address
-    ? parseInt(t.id.slice(-8), 16) || 1
-    : 1
+  // contract_tournament_id adalah integer yang lo set waktu createTournament()
+  // fallback 0 = disabled (hook skip read kalau tournamentId <= 0)
+  const tournamentIdNum = t.contract_tournament_id ?? 0
 
   const { enterTournament, prizePool, participantCount, alreadyEntered } =
     useTournament(tournamentIdNum)
@@ -49,7 +49,10 @@ function TournamentCard({ t }: { t: Tournament }) {
   }, [player, t.id])
 
   const handleFreeEntry = async () => {
-    if (!player) return
+    if (!player) {
+      setError('Profile not loaded. Wait a moment and try again.')
+      return
+    }
     setError('')
     setEntering(true)
     try {
@@ -72,19 +75,21 @@ function TournamentCard({ t }: { t: Tournament }) {
   }
 
   const handlePaidEntry = async () => {
+    if (!player) {
+      setError('Profile not loaded. Wait a moment and try again.')
+      return
+    }
     setError('')
     setEntering(true)
     try {
       await enterTournament()
-      if (player) {
-        await supabase.from('tournament_entries').upsert({
-          tournament_id: t.id,
-          player_id: player.id,
-          entry_type: 'paid',
-          best_score: 0,
-          attempt_count: 0,
-        }, { onConflict: 'tournament_id,player_id' })
-      }
+      await supabase.from('tournament_entries').upsert({
+        tournament_id: t.id,
+        player_id: player.id,
+        entry_type: 'paid',
+        best_score: 0,
+        attempt_count: 0,
+      }, { onConflict: 'tournament_id,player_id' })
       setSuccess(true)
       setAlreadyEnteredDB(true)
     } catch (e: unknown) {
@@ -104,6 +109,13 @@ function TournamentCard({ t }: { t: Tournament }) {
   const isEntered = alreadyEnteredDB || success
   const livePrizePool = t.contract_address ? prizePool : t.prize_pool_usdc
   const liveParticipants = t.contract_address ? participantCount : t.participant_count
+
+  // Button label helper
+  const freeButtonLabel = () => {
+    if (entering) return 'ENTERING...'
+    if (playerLoading) return 'LOADING...'
+    return '🎉 JOIN FREE'
+  }
 
   return (
     <div style={{
@@ -196,16 +208,19 @@ function TournamentCard({ t }: { t: Tournament }) {
         // FREE TOURNAMENT — no requirements, anyone can enter
         <button
           onClick={handleFreeEntry}
-          disabled={entering}
+          disabled={entering || playerLoading || !player}
           style={{
-            width: '100%', background: entering ? '#1a1035' : '#f5d020',
+            width: '100%',
+            background: entering || playerLoading ? '#1a1035' : '#f5d020',
             border: 'none', padding: '14px',
             fontFamily: '"Press Start 2P", monospace', fontSize: 10,
-            color: entering ? '#7c6fa0' : '#0f0a1e',
-            cursor: entering ? 'not-allowed' : 'pointer', borderRadius: 4,
+            color: entering || playerLoading ? '#7c6fa0' : '#0f0a1e',
+            cursor: entering || playerLoading || !player ? 'not-allowed' : 'pointer',
+            borderRadius: 4,
+            opacity: !player && !playerLoading ? 0.5 : 1,
           }}
         >
-          {entering ? 'ENTERING...' : '🎉 JOIN FREE'}
+          {freeButtonLabel()}
         </button>
       ) : (
         // PAID TOURNAMENT
@@ -214,12 +229,12 @@ function TournamentCard({ t }: { t: Tournament }) {
           {player?.player_type === 'human' && player.active_days >= 5 && (
             <button
               onClick={handleFreeEntry}
-              disabled={entering}
+              disabled={entering || playerLoading}
               style={{
                 width: '100%', background: 'transparent',
                 border: '1px solid rgba(16,185,129,0.5)', padding: '12px',
                 fontFamily: '"Press Start 2P", monospace', fontSize: 9,
-                color: '#10b981', cursor: entering ? 'not-allowed' : 'pointer', borderRadius: 4,
+                color: '#10b981', cursor: entering || playerLoading ? 'not-allowed' : 'pointer', borderRadius: 4,
               }}
             >
               FREE (5+ days active)
@@ -228,16 +243,16 @@ function TournamentCard({ t }: { t: Tournament }) {
           {/* Paid entry */}
           <button
             onClick={handlePaidEntry}
-            disabled={entering || !t.contract_address}
+            disabled={entering || !t.contract_address || playerLoading || !player}
             style={{
               width: '100%', background: entering ? '#1a1035' : '#7c3aed',
               border: 'none', padding: '14px',
               fontFamily: '"Press Start 2P", monospace', fontSize: 10,
               color: entering ? '#7c6fa0' : 'white',
-              cursor: entering || !t.contract_address ? 'not-allowed' : 'pointer', borderRadius: 4,
+              cursor: entering || !t.contract_address || !player ? 'not-allowed' : 'pointer', borderRadius: 4,
             }}
           >
-            {entering ? 'CONFIRM TX...' : `PAY $${t.entry_fee_usdc} USDC`}
+            {entering ? 'CONFIRM TX...' : playerLoading ? 'LOADING...' : `PAY $${t.entry_fee_usdc} USDC`}
           </button>
           {!t.contract_address && (
             <div style={{ fontSize: 9, color: '#4c1d95', textAlign: 'center', fontFamily: '"IBM Plex Mono", monospace' }}>
@@ -256,7 +271,7 @@ export default function TournamentPage() {
   const { player } = usePlayerStore()
 
   useEffect(() => {
-    const fetch = async () => {
+    const fetchTournaments = async () => {
       const { data } = await supabase
         .from('tournaments')
         .select('*')
@@ -266,7 +281,7 @@ export default function TournamentPage() {
       setTournaments(data || [])
       setLoading(false)
     }
-    fetch()
+    fetchTournaments()
   }, [])
 
   return (
