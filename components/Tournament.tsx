@@ -19,11 +19,12 @@
     const [error, setError] = useState('')
     const [success, setSuccess] = useState(false)
     const [attemptCount, setAttemptCount] = useState<number | null>(null)
+    const [realPlayerCount, setRealPlayerCount] = useState<number>(t.participant_count)
 
     const isFree = t.entry_fee_usdc === 0
     const tournamentIdNum = t.contract_tournament_id ?? 0
 
-    const { enterTournament, prizePool, participantCount } = useTournament(tournamentIdNum)
+    const { enterTournament, prizePool, participantCount: onChainParticipantCount } = useTournament(tournamentIdNum)
 
     const formatDate = (iso: string) =>
       new Date(iso).toLocaleString('en-US', {
@@ -39,8 +40,18 @@
       return `${h}h ${m}m left`
     }
 
+    // Query real participant count directly from tournament_entries (bypass trigger)
+    const fetchRealCount = useCallback(async () => {
+      const { count } = await supabase
+        .from('tournament_entries')
+        .select('*', { count: 'exact', head: true })
+        .eq('tournament_id', t.id)
+      if (count !== null) setRealPlayerCount(count)
+    }, [t.id])
+
     const [alreadyEnteredDB, setAlreadyEnteredDB] = useState(false)
     useEffect(() => {
+      fetchRealCount()
       if (!player) return
       supabase
         .from('tournament_entries')
@@ -54,7 +65,7 @@
             setAttemptCount(data.attempt_count)
           }
         })
-    }, [player, t.id])
+    }, [player, t.id, fetchRealCount])
 
     const handleFreeEntry = async () => {
       if (!player) {
@@ -76,6 +87,7 @@
         setSuccess(true)
         setAlreadyEnteredDB(true)
         setAttemptCount(0)
+        await fetchRealCount()
         onRefresh()
       } catch (e: unknown) {
         setError(e instanceof Error ? e.message : 'Failed to enter')
@@ -103,6 +115,7 @@
         setSuccess(true)
         setAlreadyEnteredDB(true)
         setAttemptCount(0)
+        await fetchRealCount()
         onRefresh()
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : 'Transaction failed'
@@ -120,7 +133,8 @@
 
     const isEntered = alreadyEnteredDB || success
     const livePrizePool = t.contract_address ? prizePool : t.prize_pool_usdc
-    const liveParticipants = t.contract_address ? participantCount : t.participant_count
+    // For paid/contract tournaments use on-chain count; for free use direct DB query
+    const liveParticipants = t.contract_address ? onChainParticipantCount : realPlayerCount
     const attemptsLeft = attemptCount !== null ? Math.max(0, 5 - attemptCount) : null
     const attemptsExhausted = attemptsLeft === 0
 
