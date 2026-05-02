@@ -20,7 +20,13 @@ const MODES: { key: GameMode; desc: string; vip?: boolean }[] = [
   { key: 'insane', desc: 'Extreme speed · VIP only', vip: true },
 ]
 
-export default function GameWrapper({ sessionType = 'casual' }: { sessionType?: SessionType }) {
+interface GameWrapperProps {
+  sessionType?: SessionType
+  tournamentId?: string | null  // Supabase UUID tournament
+  onDone?: () => void           // callback setelah game over di tournament, untuk kembali ke tab tournament
+}
+
+export default function GameWrapper({ sessionType = 'casual', tournamentId = null, onDone }: GameWrapperProps) {
   const [phase, setPhase] = useState<GamePhase>('idle')
   const [gameMode, setGameMode] = useState<GameMode>('medium')
   const [currentState, setCurrentState] = useState<GameState | null>(null)
@@ -29,6 +35,7 @@ export default function GameWrapper({ sessionType = 'casual' }: { sessionType?: 
   const [muted, setMuted] = useState(false)
   const [selectedItems, setSelectedItems] = useState<string[]>([])
   const [sharing, setSharing] = useState(false)
+  const [attemptCount, setAttemptCount] = useState(0)
 
   const startTime = useRef<number>(0)
   const { player } = usePlayerStore()
@@ -36,6 +43,22 @@ export default function GameWrapper({ sessionType = 'casual' }: { sessionType?: 
   const { startMusic, stopMusic, sfxJump, sfxCoin, sfxDeath, sfxItem, sfxScore, toggleMute } = useChiptune()
 
   const isVip = !!(player?.items?.vip && player.items.vip > 0)
+
+  // Fetch attempt count dari tournament_entries jika tournament mode
+  useEffect(() => {
+    if (!tournamentId || !player) return
+    supabase
+      .from('tournament_entries')
+      .select('attempt_count')
+      .eq('tournament_id', tournamentId)
+      .eq('player_id', player.id)
+      .single()
+      .then(({ data }) => {
+        if (data) setAttemptCount(data.attempt_count)
+      })
+  }, [tournamentId, player])
+
+  const attemptsLeft = sessionType === 'tournament' ? Math.max(0, 5 - attemptCount) : null
 
   const handleScoreUpdate = useCallback((state: GameState) => {
     setCurrentState(state)
@@ -47,7 +70,11 @@ export default function GameWrapper({ sessionType = 'casual' }: { sessionType?: 
     setPhase('dead')
     setFinalState(state)
     if (!player) return
+
     const duration = Math.floor((Date.now() - startTime.current) / 1000)
+    const newAttemptCount = attemptCount + 1
+
+    // Insert game session
     await supabase.from('game_sessions').insert({
       player_id: player.id,
       score: state.score,
@@ -55,8 +82,12 @@ export default function GameWrapper({ sessionType = 'casual' }: { sessionType?: 
       coins_collected: state.coins,
       duration_seconds: duration,
       session_type: sessionType,
+      tournament_id: tournamentId || null,
+      attempt_number: newAttemptCount,
       game_mode: gameMode,
     })
+
+    // Update leaderboard
     await supabase.rpc('upsert_daily_score', {
       p_player_id: player.id,
       p_player_type: player.player_type,
@@ -67,12 +98,33 @@ export default function GameWrapper({ sessionType = 'casual' }: { sessionType?: 
       p_player_type: player.player_type,
       p_score: state.score,
     })
+
+    // Update player totals
     await supabase.from('players').update({
       total_score: player.total_score + state.score,
       games_played: player.games_played + 1,
       flappy_points: player.flappy_points + state.score,
     }).eq('id', player.id)
-  }, [player, sfxDeath, stopMusic, sessionType, gameMode])
+
+    // Update tournament entry attempt_count + best_score
+    if (tournamentId) {
+      const { data: entry } = await supabase
+        .from('tournament_entries')
+        .select('best_score, attempt_count')
+        .eq('tournament_id', tournamentId)
+        .eq('player_id', player.id)
+        .single()
+
+      if (entry) {
+        await supabase.from('tournament_entries').update({
+          best_score: Math.max(entry.best_score, state.score),
+          attempt_count: entry.attempt_count + 1,
+        }).eq('tournament_id', tournamentId).eq('player_id', player.id)
+
+        setAttemptCount(entry.attempt_count + 1)
+      }
+    }
+  }, [player, sfxDeath, stopMusic, sessionType, gameMode, tournamentId, attemptCount])
 
   const handleShare = useCallback(async () => {
     if (!finalState) return
@@ -82,7 +134,6 @@ export default function GameWrapper({ sessionType = 'casual' }: { sessionType?: 
       const castText = `🐦 I scored ${finalState.score.toLocaleString()} in FarFlappy on ${modeLabel} mode!\n🪙 Coins: ${finalState.coins} · 🏗️ Pipes: ${finalState.pipes}\n\nCan you beat me? Play now 👇\nhttps://farflappy.xyz`
       await sdk.actions.composeCast({ text: castText })
     } catch {
-      // fallback: open warpcast compose in browser
       const text = encodeURIComponent(`🐦 I scored ${finalState?.score.toLocaleString()} in FarFlappy! Play at farflappy.xyz`)
       window.open(`https://warpcast.com/~/compose?text=${text}`, '_blank')
     } finally {
@@ -114,9 +165,27 @@ export default function GameWrapper({ sessionType = 'casual' }: { sessionType?: 
             <div className="pixel-font text-pixel text-lg mt-1">{player.total_score.toLocaleString()}</div>
           </div>
         )}
-        <button className="btn-primary text-sm px-8 py-4 w-full max-w-xs" onClick={() => setPhase('mode_select')}>
-          🎮 PLAY
-        </button>
+        {sessionType === 'tournament' && attemptsLeft !== null && (
+          <div className="card p-3 text-center w-full max-w-xs" style={{
+            border: `1px solid ${attemptsLeft <= 1 ? 'rgba(239,68,68,0.4)' : 'rgba(16,185,129,0.4)'}`,
+          }}>
+            <div className="text-xs text-text-muted">TOURNAMENT ATTEMPTS</div>
+            <div className="pixel-font text-lg mt-1" style={{
+              color: attemptsLeft <= 1 ? '#ef4444' : attemptsLeft <= 3 ? '#f59e0b' : '#10b981'
+            }}>
+              {attemptsLeft}/5 LEFT
+            </div>
+          </div>
+        )}
+        {sessionType === 'tournament' && attemptsLeft === 0 ? (
+          <div className="w-full max-w-xs py-4 text-center pixel-font" style={{ fontSize: 9, color: '#ef4444' }}>
+            NO ATTEMPTS LEFT
+          </div>
+        ) : (
+          <button className="btn-primary text-sm px-8 py-4 w-full max-w-xs" onClick={() => setPhase('mode_select')}>
+            🎮 PLAY
+          </button>
+        )}
         <button onClick={() => { const m = toggleMute(); setMuted(m) }} className="text-xs text-text-muted hover:text-text transition-colors">
           {muted ? '🔇 Sound OFF' : '🔊 Sound ON'}
         </button>
@@ -198,43 +267,35 @@ export default function GameWrapper({ sessionType = 'casual' }: { sessionType?: 
 
   // ── ITEM SELECT ──
   if (phase === 'item_select') {
-    const availableItems = Object.entries(player?.items || {}).filter(([_, qty]) => typeof qty === 'number' && qty > 0);
+    const availableItems = Object.entries(player?.items || {}).filter(([_, qty]) => typeof qty === 'number' && qty > 0)
 
     const toggleItem = (itemKey: string) => {
-      setSelectedItems(prev => 
-        prev.includes(itemKey) 
-          ? prev.filter(i => i !== itemKey) 
+      setSelectedItems(prev =>
+        prev.includes(itemKey)
+          ? prev.filter(i => i !== itemKey)
           : [...prev, itemKey]
-      );
+      )
     }
 
     const handleStartGameWithItems = async () => {
       if (selectedItems.length > 0 && player) {
-        const updatedItems = { ...player.items };
-        
+        const updatedItems = { ...player.items }
         selectedItems.forEach(itemKey => {
           if (updatedItems[itemKey] && updatedItems[itemKey] > 0) {
-            updatedItems[itemKey] -= 1;
+            updatedItems[itemKey] -= 1
           }
-        });
-
+        })
         const { error } = await supabase
           .from('players')
           .update({ items: updatedItems })
-          .eq('id', player.id);
-
+          .eq('id', player.id)
         if (error) {
-          console.error("Gagal mengurangi item di database:", error);
-          alert("Gagal memproses penggunaan item. Periksa koneksi Anda.");
-          return;
+          alert('Gagal memproses penggunaan item. Periksa koneksi Anda.')
+          return
         }
-
-        usePlayerStore.setState({ 
-          player: { ...player, items: updatedItems } 
-        });
+        usePlayerStore.setState({ player: { ...player, items: updatedItems } })
       }
-
-      startGame();
+      startGame()
     }
 
     return (
@@ -242,14 +303,14 @@ export default function GameWrapper({ sessionType = 'casual' }: { sessionType?: 
         <div className="pixel-font text-farcaster-light text-center mb-2" style={{ fontSize: 11 }}>
           EQUIP ITEMS
         </div>
-        
+
         <div className="flex flex-col gap-3 flex-1 justify-center overflow-y-auto">
           {availableItems.filter(([k]) => k !== 'vip').length === 0 ? (
-             <div className="text-center text-text-muted text-xs">No items available to equip</div>
+            <div className="text-center text-text-muted text-xs">No items available to equip</div>
           ) : (
             availableItems.map(([itemKey, qty]) => {
-              if (itemKey === 'vip') return null;
-              const isSelected = selectedItems.includes(itemKey);
+              if (itemKey === 'vip') return null
+              const isSelected = selectedItems.includes(itemKey)
               return (
                 <button
                   key={itemKey}
@@ -285,6 +346,8 @@ export default function GameWrapper({ sessionType = 'casual' }: { sessionType?: 
 
   // ── DEAD ──
   if (phase === 'dead' && finalState) {
+    const newAttemptsLeft = sessionType === 'tournament' ? Math.max(0, 5 - attemptCount) : null
+
     return (
       <div className="flex flex-col items-center justify-center h-full gap-4 p-6">
         <div className="pixel-font text-red-400 text-sm">GAME OVER</div>
@@ -309,8 +372,18 @@ export default function GameWrapper({ sessionType = 'casual' }: { sessionType?: 
           </div>
           {sessionType === 'tournament' && finalState.speedTier > 1 && (
             <div className="flex justify-between items-center">
-               <span className="text-text-muted text-xs">SPEED TIER</span>
-               <span className="pixel-font text-red-400 text-sm">{finalState.speedTier}</span>
+              <span className="text-text-muted text-xs">SPEED TIER</span>
+              <span className="pixel-font text-red-400 text-sm">{finalState.speedTier}</span>
+            </div>
+          )}
+          {newAttemptsLeft !== null && (
+            <div className="flex justify-between items-center pt-2 border-t border-farcaster/20">
+              <span className="text-text-muted text-xs">ATTEMPTS LEFT</span>
+              <span className="pixel-font text-sm" style={{
+                color: newAttemptsLeft === 0 ? '#ef4444' : newAttemptsLeft <= 2 ? '#f59e0b' : '#10b981'
+              }}>
+                {newAttemptsLeft}/5
+              </span>
             </div>
           )}
           <div className="flex justify-between items-center pt-2 border-t border-farcaster/20">
@@ -335,12 +408,25 @@ export default function GameWrapper({ sessionType = 'casual' }: { sessionType?: 
         </button>
 
         <div className="flex gap-3 w-full max-w-xs">
-          <button className="btn-primary flex-1" onClick={() => setPhase('mode_select')}>RETRY</button>
+          {/* Kalo tournament dan masih ada attempt, retry. Kalau habis, balik ke tournament */}
+          {sessionType === 'tournament' ? (
+            newAttemptsLeft && newAttemptsLeft > 0 ? (
+              <button className="btn-primary flex-1" onClick={() => setPhase('mode_select')}>
+                RETRY ({newAttemptsLeft} left)
+              </button>
+            ) : (
+              <button className="btn-primary flex-1" onClick={onDone}>
+                DONE
+              </button>
+            )
+          ) : (
+            <button className="btn-primary flex-1" onClick={() => setPhase('mode_select')}>RETRY</button>
+          )}
           <button
-            onClick={() => setPhase('idle')}
+            onClick={() => sessionType === 'tournament' ? onDone?.() : setPhase('idle')}
             className="flex-1 card text-xs pixel-font py-3 px-4 text-farcaster-light cursor-pointer hover:bg-farcaster/10 transition-colors"
           >
-            MENU
+            {sessionType === 'tournament' ? '⚔️ TOURNAMENT' : 'MENU'}
           </button>
         </div>
       </div>
@@ -355,6 +441,13 @@ export default function GameWrapper({ sessionType = 'casual' }: { sessionType?: 
           <span className="pixel-font text-pixel text-xs">{currentState.score.toLocaleString()}</span>
         </div>
       )}
+      {sessionType === 'tournament' && attemptsLeft !== null && (
+        <div className="absolute top-2 right-10 z-10 bg-black/50 rounded px-2 py-1">
+          <span className="pixel-font text-xs" style={{ color: attemptsLeft <= 1 ? '#ef4444' : '#10b981', fontSize: 7 }}>
+            {attemptsLeft} ATT LEFT
+          </span>
+        </div>
+      )}
       <button
         onClick={() => { const m = toggleMute(); setMuted(m) }}
         className="absolute top-2 right-2 z-10 bg-black/50 rounded px-2 py-1 text-sm"
@@ -362,7 +455,7 @@ export default function GameWrapper({ sessionType = 'casual' }: { sessionType?: 
         {muted ? '🔇' : '🔊'}
       </button>
       <GameEngine
-        key={gameMode}
+        key={`${gameMode}-${phase}`}
         onScoreUpdate={handleScoreUpdate}
         onGameOver={handleGameOver}
         playerItems={player?.items || {}}
