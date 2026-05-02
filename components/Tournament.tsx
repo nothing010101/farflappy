@@ -14,8 +14,6 @@ function TournamentCard({ t }: { t: Tournament }) {
   const [success, setSuccess] = useState(false)
 
   const isFree = t.entry_fee_usdc === 0
-  // contract_tournament_id adalah integer yang lo set waktu createTournament()
-  // fallback 0 = disabled (hook skip read kalau tournamentId <= 0)
   const tournamentIdNum = t.contract_tournament_id ?? 0
 
   const { enterTournament, prizePool, participantCount, alreadyEntered } =
