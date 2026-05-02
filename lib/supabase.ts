@@ -48,6 +48,7 @@ export interface Tournament {
   participant_count: number
   status: 'upcoming' | 'active' | 'completed' | 'cancelled'
   contract_address: string | null
+  contract_tournament_id: number | null  // on-chain tournament ID, set saat createTournament()
   winners: Array<{ wallet: string; rank: number; prize: number }>
 }
 
