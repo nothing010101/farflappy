@@ -6,18 +6,23 @@ import { supabase, Tournament } from '@/lib/supabase'
 import { usePlayerStore } from '@/store/playerStore'
 import { useTournament } from '@/hooks/useTournament'
 
-function TournamentCard({ t }: { t: Tournament }) {
+interface TournamentCardProps {
+  t: Tournament
+  onPlay: (tournamentId: string) => void
+}
+
+function TournamentCard({ t, onPlay }: TournamentCardProps) {
   const { player, isLoading: playerLoading } = usePlayerStore()
   const { address } = useAccount()
   const [entering, setEntering] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
+  const [attemptCount, setAttemptCount] = useState<number | null>(null)
 
   const isFree = t.entry_fee_usdc === 0
   const tournamentIdNum = t.contract_tournament_id ?? 0
 
-  const { enterTournament, prizePool, participantCount, alreadyEntered } =
-    useTournament(tournamentIdNum)
+  const { enterTournament, prizePool, participantCount } = useTournament(tournamentIdNum)
 
   const formatDate = (iso: string) =>
     new Date(iso).toLocaleString('en-US', {
@@ -33,17 +38,21 @@ function TournamentCard({ t }: { t: Tournament }) {
     return `${h}h ${m}m left`
   }
 
-  // Check if already entered via Supabase
   const [alreadyEnteredDB, setAlreadyEnteredDB] = useState(false)
   useEffect(() => {
     if (!player) return
     supabase
       .from('tournament_entries')
-      .select('id')
+      .select('id, attempt_count')
       .eq('tournament_id', t.id)
       .eq('player_id', player.id)
       .single()
-      .then(({ data }) => { if (data) setAlreadyEnteredDB(true) })
+      .then(({ data }) => {
+        if (data) {
+          setAlreadyEnteredDB(true)
+          setAttemptCount(data.attempt_count)
+        }
+      })
   }, [player, t.id])
 
   const handleFreeEntry = async () => {
@@ -65,6 +74,7 @@ function TournamentCard({ t }: { t: Tournament }) {
       if (err) throw err
       setSuccess(true)
       setAlreadyEnteredDB(true)
+      setAttemptCount(0)
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to enter')
     } finally {
@@ -90,6 +100,7 @@ function TournamentCard({ t }: { t: Tournament }) {
       }, { onConflict: 'tournament_id,player_id' })
       setSuccess(true)
       setAlreadyEnteredDB(true)
+      setAttemptCount(0)
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Transaction failed'
       if (msg.includes('User rejected') || msg.includes('denied')) {
@@ -107,8 +118,9 @@ function TournamentCard({ t }: { t: Tournament }) {
   const isEntered = alreadyEnteredDB || success
   const livePrizePool = t.contract_address ? prizePool : t.prize_pool_usdc
   const liveParticipants = t.contract_address ? participantCount : t.participant_count
+  const attemptsLeft = attemptCount !== null ? Math.max(0, 5 - attemptCount) : null
+  const attemptsExhausted = attemptsLeft === 0
 
-  // Button label helper
   const freeButtonLabel = () => {
     if (entering) return 'ENTERING...'
     if (playerLoading) return 'LOADING...'
@@ -158,7 +170,11 @@ function TournamentCard({ t }: { t: Tournament }) {
           { label: 'Ends', value: t.status === 'active' ? getTimeLeft(t.end_time) : formatDate(t.start_time) },
           { label: 'Players', value: String(liveParticipants) },
           { label: 'Prize Pool', value: livePrizePool > 0 ? `$${livePrizePool.toFixed(2)}` : 'Sponsored 🎁', color: '#10b981' },
-          { label: 'Max Attempts', value: '5' },
+          {
+            label: 'Attempts',
+            value: attemptsLeft !== null ? `${attemptsLeft}/5 left` : '5 max',
+            color: attemptsLeft !== null ? (attemptsLeft <= 1 ? '#ef4444' : attemptsLeft <= 3 ? '#f59e0b' : '#10b981') : undefined,
+          },
         ].map(({ label, value, color }) => (
           <div key={label} style={{ background: 'rgba(10,6,20,0.6)', padding: '8px 10px', borderRadius: 4 }}>
             <div style={{ fontSize: 9, color: '#7c6fa0', fontFamily: '"IBM Plex Mono", monospace' }}>{label}</div>
@@ -187,12 +203,28 @@ function TournamentCard({ t }: { t: Tournament }) {
 
       {/* Buttons */}
       {isEntered ? (
-        <div style={{
-          textAlign: 'center', padding: '14px',
-          fontFamily: '"Press Start 2P", monospace', fontSize: 9, color: '#10b981',
-          border: '1px solid rgba(16,185,129,0.3)', borderRadius: 4,
-        }}>
-          ✓ ENTERED — GO PLAY!
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {attemptsExhausted ? (
+            <div style={{
+              textAlign: 'center', padding: '14px',
+              fontFamily: '"Press Start 2P", monospace', fontSize: 9, color: '#ef4444',
+              border: '1px solid rgba(239,68,68,0.3)', borderRadius: 4,
+            }}>
+              ✗ NO ATTEMPTS LEFT
+            </div>
+          ) : (
+            <button
+              onClick={() => onPlay(t.id)}
+              style={{
+                width: '100%', background: '#10b981',
+                border: 'none', padding: '14px',
+                fontFamily: '"Press Start 2P", monospace', fontSize: 10,
+                color: '#0f0a1e', cursor: 'pointer', borderRadius: 4,
+              }}
+            >
+              ▶ GO PLAY {attemptsLeft !== null ? `(${attemptsLeft} left)` : ''}
+            </button>
+          )}
         </div>
       ) : !address ? (
         <div style={{
@@ -203,7 +235,6 @@ function TournamentCard({ t }: { t: Tournament }) {
           Connect wallet to enter
         </div>
       ) : isFree ? (
-        // FREE TOURNAMENT — no requirements, anyone can enter
         <button
           onClick={handleFreeEntry}
           disabled={entering || playerLoading || !player}
@@ -221,9 +252,7 @@ function TournamentCard({ t }: { t: Tournament }) {
           {freeButtonLabel()}
         </button>
       ) : (
-        // PAID TOURNAMENT
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {/* Free entry if eligible */}
           {player?.player_type === 'human' && player.active_days >= 5 && (
             <button
               onClick={handleFreeEntry}
@@ -238,7 +267,6 @@ function TournamentCard({ t }: { t: Tournament }) {
               FREE (5+ days active)
             </button>
           )}
-          {/* Paid entry */}
           <button
             onClick={handlePaidEntry}
             disabled={entering || !t.contract_address || playerLoading || !player}
@@ -263,7 +291,7 @@ function TournamentCard({ t }: { t: Tournament }) {
   )
 }
 
-export default function TournamentPage() {
+export default function TournamentPage({ onPlay }: { onPlay: (tournamentId: string) => void }) {
   const [tournaments, setTournaments] = useState<Tournament[]>([])
   const [loading, setLoading] = useState(true)
   const { player } = usePlayerStore()
@@ -284,12 +312,10 @@ export default function TournamentPage() {
 
   return (
     <div style={{ height: '100%', overflowY: 'auto', padding: 16 }}>
-      {/* Header */}
       <div style={{ fontFamily: '"Press Start 2P", monospace', fontSize: 10, color: '#a78bfa', textAlign: 'center', marginBottom: 6 }}>
         ⚔️ TOURNAMENTS
       </div>
 
-      {/* Beta banner */}
       <div style={{
         background: 'rgba(245,208,32,0.1)',
         border: '1px solid rgba(245,208,32,0.4)',
@@ -305,7 +331,6 @@ export default function TournamentPage() {
         </div>
       </div>
 
-      {/* Rules */}
       <div style={{
         background: 'rgba(10,6,20,0.8)', border: '1px solid rgba(124,58,237,0.2)',
         borderRadius: 4, padding: '12px 14px', marginBottom: 14,
@@ -325,7 +350,6 @@ export default function TournamentPage() {
         ))}
       </div>
 
-      {/* Player status */}
       {player && (
         <div style={{
           background: 'rgba(124,58,237,0.08)', border: '1px solid rgba(124,58,237,0.2)',
@@ -341,7 +365,6 @@ export default function TournamentPage() {
         </div>
       )}
 
-      {/* Tournament list */}
       {loading ? (
         <div style={{ textAlign: 'center', color: '#7c6fa0', fontFamily: '"Press Start 2P", monospace', fontSize: 8, marginTop: 40 }}>
           LOADING...
@@ -355,7 +378,7 @@ export default function TournamentPage() {
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          {tournaments.map(t => <TournamentCard key={t.id} t={t} />)}
+          {tournaments.map(t => <TournamentCard key={t.id} t={t} onPlay={onPlay} />)}
         </div>
       )}
     </div>
