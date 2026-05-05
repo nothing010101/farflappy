@@ -8,6 +8,11 @@
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   const supabase = createClient(supabaseUrl, supabaseKey)
 
+  // ─── CHANGE THIS to set the launch date/time (UTC) ───────────────────────────
+  const LAUNCH_TARGET = new Date('2026-05-07T00:00:00Z').getTime()
+  const TOKEN_LINK = '' // e.g. 'https://app.uniswap.org/...' — add when ready
+  // ─────────────────────────────────────────────────────────────────────────────
+
   function PixelBirdHero({ frame }: { frame: number }) {
     const flap = frame % 10 < 5
     const bob = Math.sin(frame * 0.05) * 8
@@ -54,33 +59,14 @@
     return stats
   }
 
-  // Fetch the single shared launch target from Supabase — same for ALL devices
+  // Fixed timestamp hardcoded — same for every device, never resets on refresh
   function useCountdown() {
-    const [target, setTarget] = useState<number | null>(null)
     const [timeLeft, setTimeLeft] = useState({ h: 0, m: 0, s: 0, total: 0 })
     const [launched, setLaunched] = useState(false)
-    const DURATION_MS = 48 * 60 * 60 * 1000
 
-    // Fetch target from Supabase once
     useEffect(() => {
-      const fetchTarget = async () => {
-        const { data } = await supabase
-          .from('app_config')
-          .select('value')
-          .eq('key', 'flappy_launch_target')
-          .single()
-        if (data?.value) {
-          setTarget(parseInt(data.value, 10))
-        }
-      }
-      fetchTarget()
-    }, [])
-
-    // Tick every second once we have the target
-    useEffect(() => {
-      if (target === null) return
       const tick = () => {
-        const diff = target - Date.now()
+        const diff = LAUNCH_TARGET - Date.now()
         if (diff <= 0) {
           setLaunched(true)
           setTimeLeft({ h: 0, m: 0, s: 0, total: 0 })
@@ -96,32 +82,21 @@
       tick()
       const id = setInterval(tick, 1000)
       return () => clearInterval(id)
-    }, [target])
+    }, [])
 
-    return { timeLeft, launched, ready: target !== null, target, DURATION_MS }
+    return { timeLeft, launched }
   }
 
   function StatPulse() {
     return <span style={{ display: 'inline-block', width: 5, height: 5, borderRadius: '50%', background: '#10b981', marginRight: 5, verticalAlign: 'middle', animation: 'pulse 2s infinite' }} />
   }
 
+  const TOTAL_MS = LAUNCH_TARGET - new Date('2026-05-04T00:00:00Z').getTime()
+
   function CountdownSection({ stats }: { stats: LiveStats }) {
-    const { timeLeft, launched, ready, target, DURATION_MS } = useCountdown()
+    const { timeLeft, launched } = useCountdown()
     const pad = (n: number) => String(n).padStart(2, '0')
     const fmt = (n: number | null) => { if (n === null) return '...'; if (n >= 1000) return (n / 1000).toFixed(1) + 'K'; return n.toLocaleString() }
-
-    // If Supabase row not set yet, show setup prompt (only visible to dev)
-    if (!ready && !launched) {
-      return (
-        <section style={{ padding: '0 16px 60px', maxWidth: 680, margin: '0 auto' }}>
-          <div style={{ background: '#111028', border: '1px solid rgba(124,58,237,0.2)', padding: '24px', textAlign: 'center' }}>
-            <div style={{ fontFamily: '"Press Start 2P", monospace', fontSize: 8, color: '#4c1d95' }}>
-              LOADING LAUNCH TIMER...
-            </div>
-          </div>
-        </section>
-      )
-    }
 
     return (
       <section style={{ padding: '0 16px 60px', maxWidth: 680, margin: '0 auto' }}>
@@ -133,7 +108,7 @@
           animation: 'glow 3s ease-in-out infinite',
         }}>
           {/* Corner dots */}
-          {[{t:6,l:6},{t:6,r:6},{b:6,l:6},{b:6,r:6}].map((pos, i) => (
+          {[{top:6,left:6},{top:6,right:6},{bottom:6,left:6},{bottom:6,right:6}].map((pos, i) => (
             <div key={i} style={{ position: 'absolute', ...pos, width: 4, height: 4, background: '#f5d020', opacity: 0.6 }} />
           ))}
 
@@ -145,12 +120,25 @@
           </div>
 
           {launched ? (
-            <div style={{ textAlign: 'center', fontFamily: '"Press Start 2P", monospace', fontSize: 'clamp(12px, 2.5vw, 18px)', color: '#f5d020', textShadow: '0 0 20px rgba(245,208,32,0.8)' }}>
-              🚀 $FLAPPY IS LIVE ON BASE!
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontFamily: '"Press Start 2P", monospace', fontSize: 'clamp(12px, 2.5vw, 18px)', color: '#f5d020', textShadow: '0 0 20px rgba(245,208,32,0.8)', marginBottom: 20 }}>
+                🚀 $FLAPPY IS LIVE ON BASE!
+              </div>
+              {TOKEN_LINK && (
+                <a href={TOKEN_LINK} target="_blank" rel="noopener noreferrer">
+                  <button style={{
+                    background: 'linear-gradient(90deg, #f5d020, #f59e0b)',
+                    color: '#0a0614', border: 'none', cursor: 'pointer',
+                    fontFamily: '"Press Start 2P", monospace', fontSize: 10,
+                    padding: '14px 28px',
+                    boxShadow: '0 0 20px rgba(245,208,32,0.5), 3px 3px 0 #92400e',
+                  }}>🪙 BUY $FLAPPY →</button>
+                </a>
+              )}
             </div>
           ) : (
             <>
-              {/* Timer */}
+              {/* Timer digits */}
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'center', gap: 4, marginBottom: 8 }}>
                 {[
                   { val: pad(timeLeft.h), label: 'HRS' },
@@ -178,22 +166,20 @@
               </div>
 
               {/* Progress bar */}
-              {target !== null && (
-                <div style={{ width: '100%', maxWidth: 400, margin: '0 auto 20px' }}>
-                  <div style={{ background: 'rgba(124,58,237,0.15)', height: 5, borderRadius: 3, overflow: 'hidden' }}>
-                    <div style={{
-                      height: '100%',
-                      background: 'linear-gradient(90deg, #7c3aed, #f5d020)',
-                      width: `${Math.max(0, Math.min(100, ((DURATION_MS - timeLeft.total) / DURATION_MS) * 100))}%`,
-                      transition: 'width 1s linear',
-                      boxShadow: '0 0 6px rgba(245,208,32,0.4)',
-                    }} />
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4, fontFamily: '"Press Start 2P", monospace', fontSize: 6, color: '#4c1d95' }}>
-                    <span>START</span><span>LAUNCH</span>
-                  </div>
+              <div style={{ width: '100%', maxWidth: 400, margin: '0 auto 20px' }}>
+                <div style={{ background: 'rgba(124,58,237,0.15)', height: 5, borderRadius: 3, overflow: 'hidden' }}>
+                  <div style={{
+                    height: '100%',
+                    background: 'linear-gradient(90deg, #7c3aed, #f5d020)',
+                    width: `${Math.max(0, Math.min(100, ((TOTAL_MS - timeLeft.total) / TOTAL_MS) * 100))}%`,
+                    transition: 'width 1s linear',
+                    boxShadow: '0 0 6px rgba(245,208,32,0.4)',
+                  }} />
                 </div>
-              )}
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4, fontFamily: '"Press Start 2P", monospace', fontSize: 6, color: '#4c1d95' }}>
+                  <span>START</span><span>MAY 7 UTC</span>
+                </div>
+              </div>
             </>
           )}
 
@@ -283,7 +269,6 @@
           ))}
 
           <div style={{ marginBottom: 12 }}><PixelBirdHero frame={frame} /></div>
-
           <div style={{ fontFamily: '"Press Start 2P", monospace', fontSize: 'clamp(24px, 5vw, 52px)', color: '#f5d020', textShadow: '4px 4px 0 #7c3aed', marginBottom: 10, lineHeight: 1.2 }}>FARFLAPPY</div>
           <div style={{ fontFamily: '"Press Start 2P", monospace', fontSize: 'clamp(8px, 1.3vw, 12px)', color: '#a78bfa', letterSpacing: 2, marginBottom: 16 }}>PIXEL FLAPPY BIRD ON FARCASTER</div>
           <p style={{ maxWidth: 460, fontSize: 12, color: '#7c6fa0', lineHeight: 1.8, marginBottom: 28, padding: '0 16px' }}>
@@ -319,7 +304,7 @@
           <div style={{ position: 'absolute', bottom: 20, fontFamily: '"Press Start 2P", monospace', fontSize: 7, color: '#4c1d95' }} className="animate-bounce">↓ SCROLL</div>
         </section>
 
-        {/* Countdown — reads from Supabase, same for all devices */}
+        {/* Countdown */}
         <CountdownSection stats={stats} />
 
         {/* How it works */}
