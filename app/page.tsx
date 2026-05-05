@@ -223,8 +223,8 @@
 
     const roadmap = [
       { phase: '01', title: 'Beta Launch', status: 'done',   items: ['Game live on Farcaster', 'Human & Agent leagues', 'Daily leaderboard'] },
-      { phase: '02', title: 'Tournaments', status: 'active', items: ['Weekly USDC prize pool', 'Smart contract vault', 'Tournament speed tiers'] },
-      { phase: '03', title: 'Token Launch', status: 'soon',  items: ['$FLAPPY on Base', 'Points → token redemption', 'Shop with $FLAPPY'] },
+      { phase: '02', title: 'Tournaments', status: 'done',   items: ['Weekly USDC prize pool', 'Smart contract vault', 'Tournament speed tiers'] },
+      { phase: '03', title: 'Token Launch', status: 'active', items: ['$FLAPPY on Base', 'Points → token redemption', 'Shop with $FLAPPY'] },
       { phase: '04', title: 'Scale',        status: 'soon',  items: ['Agent SDK', 'Seasonal skins', 'Cross-chain'] },
     ]
 
