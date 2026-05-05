@@ -187,7 +187,7 @@
           <div style={{ textAlign: 'center' }}>
             <p style={{ fontSize: 11, color: '#7c6fa0', lineHeight: 1.8, marginBottom: 16 }}>
               Earn as many points as possible before launch.<br />
-              <span style={{ color: '#a78bfa' }}>Every point = 1 $FLAPPY token at redemption.</span>
+              <span style={{ color: '#a78bfa' }}>The more you play, the more you earn.</span>
             </p>
             <Link href="/play">
               <button style={{
