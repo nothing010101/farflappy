@@ -91,15 +91,15 @@ export default function Home() {
     setGuestError('')
     const nick = guestNickname.trim()
     const w = guestWallet.trim()
-    if (!nick || nick.length < 2) { setGuestError('Nickname minimal 2 karakter'); return }
-    if (!isValidEVM(w)) { setGuestError('Wallet address tidak valid (0x...)'); return }
+    if (!nick || nick.length < 2) { setGuestError('Nickname must be at least 2 characters'); return }
+    if (!isValidEVM(w)) { setGuestError('Invalid wallet address (0x...)'); return }
     setGuestLoading(true)
     try {
       await fetchOrCreatePlayer({ wallet: w, username: nick })
       localStorage.setItem(GUEST_KEY, JSON.stringify({ nickname: nick, wallet: w }))
       setShowGuestForm(false)
     } catch (e) {
-      setGuestError('Gagal login, coba lagi')
+      setGuestError('Login failed, please try again')
     }
     setGuestLoading(false)
   }
