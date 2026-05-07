@@ -9,7 +9,7 @@
   const supabase = createClient(supabaseUrl, supabaseKey)
 
   // ─── CHANGE THIS to set the launch date/time (UTC) ───────────────────────────
-  const LAUNCH_TARGET = new Date('2026-05-07T08:00:00Z').getTime()
+  const LAUNCH_TARGET = new Date('2026-05-07T12:00:00Z').getTime()
   const TOKEN_LINK = '' // e.g. 'https://app.uniswap.org/...' — add when ready
   // ─────────────────────────────────────────────────────────────────────────────
 
