@@ -10,7 +10,7 @@
 
   // ─── CHANGE THIS to set the launch date/time (UTC) ───────────────────────────
   const LAUNCH_TARGET = new Date('2026-05-07T12:00:00Z').getTime()
-  const TOKEN_LINK = 'https://clanker.world/clanker/0x57D85753C56fBFFeF08E2693d92432D79d587B07'
+  const TOKEN_LINK = 'https://flaunch.gg'
   // ─────────────────────────────────────────────────────────────────────────────
 
   function PixelBirdHero({ frame }: { frame: number }) {
