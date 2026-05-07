@@ -10,7 +10,7 @@
 
   // ─── CHANGE THIS to set the launch date/time (UTC) ───────────────────────────
   const LAUNCH_TARGET = new Date('2026-05-07T12:00:00Z').getTime()
-  const TOKEN_LINK = '' // e.g. 'https://app.uniswap.org/...' — add when ready
+  const TOKEN_LINK = 'https://clanker.world/clanker/0x57D85753C56fBFFeF08E2693d92432D79d587B07'
   // ─────────────────────────────────────────────────────────────────────────────
 
   function PixelBirdHero({ frame }: { frame: number }) {
@@ -256,6 +256,9 @@
                  onMouseOver={e => (e.currentTarget.style.color = '#a78bfa')}
                  onMouseOut={e => (e.currentTarget.style.color = '#7c6fa0')}>{label}</a>
             ))}
+            <a href={TOKEN_LINK} target="_blank" rel="noopener noreferrer">
+  <button style={{ background: 'linear-gradient(90deg, #f5d020, #f59e0b)', color: '#0a0614', border: 'none', cursor: 'pointer', fontFamily: '"Press Start 2P", monospace', fontSize: 8, padding: '8px 14px' }}>🪙 $FLAPPY</button>
+</a>
             <Link href="/play">
               <button style={{ background: '#7c3aed', color: 'white', border: 'none', cursor: 'pointer', fontFamily: '"Press Start 2P", monospace', fontSize: 8, padding: '8px 14px' }}>PLAY →</button>
             </Link>
