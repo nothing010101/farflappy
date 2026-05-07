@@ -10,7 +10,7 @@
 
   // ─── CHANGE THIS to set the launch date/time (UTC) ───────────────────────────
   const LAUNCH_TARGET = new Date('2026-05-07T12:00:00Z').getTime()
-  const TOKEN_LINK = 'https://flaunch.gg'
+  const TOKEN_LINK = 'flaunch.gg/base/coins/0xAf20528BfB84aa864121276600A260faf8302110'
   // ─────────────────────────────────────────────────────────────────────────────
 
   function PixelBirdHero({ frame }: { frame: number }) {
