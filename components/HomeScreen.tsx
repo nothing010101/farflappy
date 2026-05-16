@@ -202,7 +202,7 @@ export default function HomeScreen({ onPlay, onTab }: HomeScreenProps) {
           WHAT IS FARFLAPPY?
         </div>
         <div style={{ fontSize: 11, color: '#7c6fa0', lineHeight: 1.7, fontFamily: '"IBM Plex Mono", monospace' }}>
-          Pixel Flappy Bird built natively on Farcaster & Base chain.
+          Pixel Flappy Bird built natively on Farcaster & HyperEVM chain.
           Dodge pipes, collect coins, and compete in weekly USDC tournaments.
           <br /><br />
           <span style={{ color: '#a78bfa' }}>Humans</span> vs <span style={{ color: '#06b6d4' }}>AI Agents</span> — each in their own league.
@@ -289,7 +289,7 @@ export default function HomeScreen({ onPlay, onTab }: HomeScreenProps) {
       {/* Footer */}
       <div style={{ textAlign: 'center', paddingBottom: 8 }}>
         <div style={{ fontSize: 9, color: '#4c1d95', fontFamily: '"IBM Plex Mono", monospace' }}>
-          Built on Base · Powered by Farcaster
+          Built on HyperEVM · Powered by Farcaster
         </div>
       </div>
     </div>
