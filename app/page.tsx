@@ -10,7 +10,7 @@
 
   // ─── CHANGE THIS to set the launch date/time (UTC) ───────────────────────────
   const LAUNCH_TARGET = new Date('2026-05-07T12:00:00Z').getTime()
-  const TOKEN_LINK = 'flaunch.gg/base/coins/0xAf20528BfB84aa864121276600A260faf8302110'
+  const TOKEN_LINK = 'https://alt.fun'
   // ─────────────────────────────────────────────────────────────────────────────
 
   function PixelBirdHero({ frame }: { frame: number }) {
@@ -122,7 +122,7 @@
           {launched ? (
             <div style={{ textAlign: 'center' }}>
               <div style={{ fontFamily: '"Press Start 2P", monospace', fontSize: 'clamp(12px, 2.5vw, 18px)', color: '#f5d020', textShadow: '0 0 20px rgba(245,208,32,0.8)', marginBottom: 20 }}>
-                🚀 $FLAPPY IS LIVE ON BASE!
+                🚀 $FLAPPY IS LIVE ON HYPEREVM!
               </div>
               {TOKEN_LINK && (
                 <a href={TOKEN_LINK} target="_blank" rel="noopener noreferrer">
@@ -161,7 +161,7 @@
               {/* Label */}
               <div style={{ textAlign: 'center', marginBottom: 16 }}>
                 <span style={{ fontFamily: '"Press Start 2P", monospace', fontSize: 'clamp(8px, 1.8vw, 11px)', color: '#a78bfa' }}>
-                  $FLAPPY LAUNCH ON BASE
+                  $FLAPPY LAUNCH ON HYPEREVM
                 </span>
               </div>
 
@@ -224,7 +224,7 @@
     const roadmap = [
       { phase: '01', title: 'Beta Launch', status: 'done',   items: ['Game live on Farcaster', 'Human & Agent leagues', 'Daily leaderboard'] },
       { phase: '02', title: 'Tournaments', status: 'done',   items: ['Weekly USDC prize pool', 'Smart contract vault', 'Tournament speed tiers'] },
-      { phase: '03', title: 'Token Launch', status: 'active', items: ['$FLAPPY on Base', 'Points → token redemption', 'Shop with $FLAPPY'] },
+      { phase: '03', title: 'Token Launch', status: 'active', items: ['$FLAPPY on HyperEVM', 'Points → token redemption', 'Shop with $FLAPPY'] },
       { phase: '04', title: 'Scale',        status: 'soon',  items: ['Agent SDK', 'Seasonal skins', 'Cross-chain'] },
     ]
 
@@ -275,7 +275,7 @@
           <div style={{ fontFamily: '"Press Start 2P", monospace', fontSize: 'clamp(24px, 5vw, 52px)', color: '#f5d020', textShadow: '4px 4px 0 #7c3aed', marginBottom: 10, lineHeight: 1.2 }}>FARFLAPPY</div>
           <div style={{ fontFamily: '"Press Start 2P", monospace', fontSize: 'clamp(8px, 1.3vw, 12px)', color: '#a78bfa', letterSpacing: 2, marginBottom: 16 }}>PIXEL FLAPPY BIRD ON FARCASTER</div>
           <p style={{ maxWidth: 460, fontSize: 12, color: '#7c6fa0', lineHeight: 1.8, marginBottom: 28, padding: '0 16px' }}>
-            Dodge pipes, collect coins, and compete in weekly USDC tournaments. Human and AI agent leagues. Built on Base chain.
+            Dodge pipes, collect coins, and compete in weekly USDC tournaments. Human and AI agent leagues. Built on HyperEVM chain.
           </p>
 
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
@@ -293,7 +293,7 @@
               { label: 'PLAYERS',    value: fmt(stats.totalPlayers), live: true,  color: '#a78bfa' },
               { label: 'GAMES',      value: fmt(stats.totalGames),   live: true,  color: '#10b981' },
               { label: 'PRIZE POOL', value: stats.prizePool !== null ? `$${stats.prizePool}` : '...', live: true, color: '#f5d020' },
-              { label: 'CHAIN',      value: 'Base',                  live: false, color: '#06b6d4' },
+              { label: 'CHAIN',      value: 'HyperEVM',                  live: false, color: '#06b6d4' },
             ].map(({ label, value, live, color }, i, arr) => (
               <div key={label} style={{ textAlign: 'center', padding: '14px 20px', borderRight: i < arr.length - 1 ? '1px solid rgba(124,58,237,0.2)' : 'none' }}>
                 <div style={{ fontFamily: '"Press Start 2P", monospace', fontSize: 6, color: '#4c1d95', marginBottom: 6, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -385,7 +385,7 @@
             {[
               { q: 'Do I need crypto to play?',      a: 'No. Play for free and earn $FLAPPY points. USDC only needed for tournament entry.' },
               { q: 'What is the Agent League?',      a: 'AI agents compete via REST API in a separate leaderboard. Agents cannot enter the Human League.' },
-              { q: 'When does $FLAPPY launch?',      a: 'Soon™. Points you earn now will be redeemable for $FLAPPY tokens at launch on Base.' },
+              { q: 'When does $FLAPPY launch?',      a: 'Soon™. Points you earn now will be redeemable for $FLAPPY tokens at launch on HyperEVM.' },
               { q: 'How are prizes distributed?',    a: '80% of the entry fee pool goes to winners via smart contract. 20% goes to development.' },
               { q: 'What are the difficulty modes?', a: 'Easy, Medium, Expert — each increases pipe speed. Insane mode available for VIP players.' },
             ].map(({ q, a }) => (
@@ -402,7 +402,7 @@
           <div style={{ fontFamily: '"Press Start 2P", monospace', fontSize: 10, color: '#a78bfa', marginBottom: 10 }}>
             FAR<span style={{ color: '#f5d020' }}>FLAPPY</span>
           </div>
-          <div style={{ fontSize: 10, color: '#4c1d95' }}>Built on Base · Powered by Farcaster</div>
+          <div style={{ fontSize: 10, color: '#4c1d95' }}>Built on HyperEVM · Powered by Farcaster</div>
           <div style={{ marginTop: 14 }}>
             <Link href="/play">
               <button style={{ background: '#7c3aed', color: 'white', border: 'none', cursor: 'pointer', fontFamily: '"Press Start 2P", monospace', fontSize: 8, padding: '10px 20px' }}>▶ PLAY NOW</button>
