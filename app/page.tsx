@@ -10,7 +10,7 @@
 
   // ─── CHANGE THIS to set the launch date/time (UTC) ───────────────────────────
   const LAUNCH_TARGET = new Date('2026-05-07T12:00:00Z').getTime()
-  const TOKEN_LINK = 'https://alt.fun'
+  const TOKEN_LINK = 'https://alt.fun/token/0x7521f9fea4417d7e52c067508e07a765f0300000'
   // ─────────────────────────────────────────────────────────────────────────────
 
   function PixelBirdHero({ frame }: { frame: number }) {
