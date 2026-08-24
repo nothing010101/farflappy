@@ -91,7 +91,7 @@
     return <span style={{ display: 'inline-block', width: 5, height: 5, borderRadius: '50%', background: '#10b981', marginRight: 5, verticalAlign: 'middle', animation: 'pulse 2s infinite' }} />
   }
 
-  const TOTAL_MS = LAUNCH_TARGET - new Date('2026-05-04T00:00:00Z').getTime()
+  const TOTAL_MS = LAUNCH_TARGET - new Date('2026-08-25T00:00:00Z').getTime()
 
   function CountdownSection({ stats }: { stats: LiveStats }) {
     const { timeLeft, launched } = useCountdown()
