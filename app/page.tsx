@@ -10,7 +10,7 @@
 
   // ─── CHANGE THIS to set the launch date/time (UTC) ───────────────────────────
   const LAUNCH_TARGET = new Date('2026-05-07T12:00:00Z').getTime()
-  const TOKEN_LINK = 'https://alt.fun/token/0x7521f9fea4417d7e52c067508e07a765f0300000'
+  const TOKEN_LINK = 'https://letscash.fun/'
   // ─────────────────────────────────────────────────────────────────────────────
 
   function PixelBirdHero({ frame }: { frame: number }) {
@@ -122,10 +122,10 @@
           {launched ? (
             <div style={{ textAlign: 'center' }}>
               <div style={{ fontFamily: '"Press Start 2P", monospace', fontSize: 'clamp(12px, 2.5vw, 18px)', color: '#f5d020', textShadow: '0 0 20px rgba(245,208,32,0.8)', marginBottom: 20 }}>
-                🚀 $FLAPPY IS LIVE ON HYPEREVM!
+                🚀 $FLAPPY IS LIVE ON ROBINHOOD!
               </div>
               {TOKEN_LINK && (
-                <a href={TOKEN_LINK} target="_blank" rel="noopener noreferrer">
+                <a href="https://letscash.fun" target="_blank" rel="noopener noreferrer">
                   <button style={{
                     background: 'linear-gradient(90deg, #f5d020, #f59e0b)',
                     color: '#0a0614', border: 'none', cursor: 'pointer',
@@ -161,7 +161,7 @@
               {/* Label */}
               <div style={{ textAlign: 'center', marginBottom: 16 }}>
                 <span style={{ fontFamily: '"Press Start 2P", monospace', fontSize: 'clamp(8px, 1.8vw, 11px)', color: '#a78bfa' }}>
-                  $FLAPPY LAUNCH ON HYPEREVM
+                  $FLAPPY LAUNCH ON ROBINHOOD
                 </span>
               </div>
 
@@ -177,7 +177,7 @@
                   }} />
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4, fontFamily: '"Press Start 2P", monospace', fontSize: 6, color: '#4c1d95' }}>
-                  <span>START</span><span>MAY 7 UTC</span>
+                  <span>START</span><span> 25 AUGUST </span>
                 </div>
               </div>
             </>
@@ -256,7 +256,7 @@
                  onMouseOver={e => (e.currentTarget.style.color = '#a78bfa')}
                  onMouseOut={e => (e.currentTarget.style.color = '#7c6fa0')}>{label}</a>
             ))}
-            <a href={TOKEN_LINK} target="_blank" rel="noopener noreferrer">
+            <a href="https://letscash.fun" target="_blank" rel="noopener noreferrer">
   <button style={{ background: 'linear-gradient(90deg, #f5d020, #f59e0b)', color: '#0a0614', border: 'none', cursor: 'pointer', fontFamily: '"Press Start 2P", monospace', fontSize: 8, padding: '8px 14px' }}>🪙 $FLAPPY</button>
 </a>
             <Link href="/play">
@@ -383,7 +383,7 @@
           <h2 style={{ fontFamily: '"Press Start 2P", monospace', fontSize: 16, color: '#a78bfa', textAlign: 'center', marginBottom: 36 }}>FAQ</h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {[
-              { q: 'Do I need crypto to play?',      a: 'No. Play for free and earn $FLAPPY points. USDC only needed for tournament entry.' },
+              { q: 'Do I need crypto to play?',      a: 'No. Play for free and earn $FLAPPY points. USDG only needed for tournament entry.' },
               { q: 'What is the Agent League?',      a: 'AI agents compete via REST API in a separate leaderboard. Agents cannot enter the Human League.' },
               { q: 'When does $FLAPPY launch?',      a: 'Soon™. Points you earn now will be redeemable for $FLAPPY tokens at launch on HyperEVM.' },
               { q: 'How are prizes distributed?',    a: '80% of the entry fee pool goes to winners via smart contract. 20% goes to development.' },
@@ -402,7 +402,7 @@
           <div style={{ fontFamily: '"Press Start 2P", monospace', fontSize: 10, color: '#a78bfa', marginBottom: 10 }}>
             FAR<span style={{ color: '#f5d020' }}>FLAPPY</span>
           </div>
-          <div style={{ fontSize: 10, color: '#4c1d95' }}>Built on HyperEVM · Powered by Farcaster</div>
+          <div style={{ fontSize: 10, color: '#4c1d95' }}>Built on ROBINHOOD · Powered by Farcaster</div>
           <div style={{ marginTop: 14 }}>
             <Link href="/play">
               <button style={{ background: '#7c3aed', color: 'white', border: 'none', cursor: 'pointer', fontFamily: '"Press Start 2P", monospace', fontSize: 8, padding: '10px 20px' }}>▶ PLAY NOW</button>
